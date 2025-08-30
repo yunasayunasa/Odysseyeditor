@@ -2,7 +2,7 @@
 
 import ConfigManager from '../core/ConfigManager.js';
 import StateManager from '../core/StateManager.js';
-import SoundManager from '../core/SoundManager.js';
+import EditorManager from '../core/EditorManager.js';
 
 export default class PreloadScene extends Phaser.Scene {
     constructor() {
