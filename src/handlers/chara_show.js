@@ -61,9 +61,12 @@ export function handleCharaShow(manager, params) {
         // ★★★ 管理リストに登録。セーブ時はこのオブジェクトが参照される ★★★
         manager.scene.characters[name] = chara;
 
-       const editorManager = manager.scene.sys.registry.get('editorManager');
-if (editorManager) {
-    editorManager.makeEditable(chara, manager.scene);
+     const stateManager = manager.scene.sys.registry.get('stateManager');
+if (stateManager.sf.debug_mode) {
+    chara.setInteractive();
+    manager.scene.input.setDraggable(chara, true);
+    chara.on('pointerover', () => chara.setTint(0x00ff00));
+    chara.on('pointerout', () => chara.clearTint());
 }
         // --- 4. アニメーション ---
         const time = Number(params.time) || 0;

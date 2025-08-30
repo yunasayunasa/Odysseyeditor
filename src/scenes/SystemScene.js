@@ -18,7 +18,10 @@ export default class SystemScene extends Phaser.Scene {
 
     create() {
         console.log("SystemScene: 起動・グローバルサービスのセットアップを開始。");
-        const soundManager = new SoundManager(this.game);
+ if (stateManager.sf.debug_mode) {
+        this.scene.launch('EditorScene');
+    }  
+          const soundManager = new SoundManager(this.game);
         this.sys.registry.set('soundManager', soundManager);
         this.input.once('pointerdown', () => soundManager.resumeContext(), this);
         console.log("SystemScene: SoundManagerを生成・登録しました。");
@@ -28,7 +31,8 @@ export default class SystemScene extends Phaser.Scene {
         this.events.on('return-to-novel', this._handleReturnToNovel, this);
         this.events.on('request-overlay', this._handleRequestOverlay, this);
         this.events.on('end-overlay', this._handleEndOverlay, this);
-        
+        const stateManager = this.registry.get('stateManager');
+   
         // ★★★ PreloadSceneから渡されたデータで初期ゲームを起動 ★★★
         if (this.initialGameData) {
             this._startInitialGame(this.initialGameData);

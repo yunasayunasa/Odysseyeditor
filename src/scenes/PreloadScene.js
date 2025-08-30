@@ -2,7 +2,6 @@
 
 import ConfigManager from '../core/ConfigManager.js';
 import StateManager from '../core/StateManager.js';
-import EditorManager from '../core/EditorManager.js';
 
 export default class PreloadScene extends Phaser.Scene {
     constructor() {
@@ -47,11 +46,7 @@ export default class PreloadScene extends Phaser.Scene {
         this.sys.registry.set('stateManager', stateManager);
 
           
-         if (stateManager.sf.debug_mode) {
-            // ★★★ 修正点: this.game ではなく this (PreloadSceneインスタンス) を渡す ★★★
-            const editorManager = new EditorManager(this);
-            this.registry.set('editorManager', editorManager);
-        }
+     
         // --- asset_define.jsonに基づいて残りのアセットをロードキューに追加 ---
         const assetDefine = this.cache.json.get('asset_define');
         for (const key in assetDefine.images) { this.load.image(key, assetDefine.images[key]); }

@@ -74,10 +74,7 @@ export default class GameScene extends Phaser.Scene {
         // --- マネージャー/UIクラスの生成 ---
         this.configManager = this.sys.registry.get('configManager');
         this.stateManager = this.sys.registry.get('stateManager'); 
-          const editorManager = this.sys.registry.get('editorManager');
-        if (editorManager) {
-            editorManager.registerScene(this);
-        }
+     
         
            // ★★★ 修正箇所: SoundManagerをnewするのではなく、Registryから取得 ★★★
         this.soundManager = this.sys.registry.get('soundManager');
@@ -150,10 +147,7 @@ export default class GameScene extends Phaser.Scene {
     this.uiButtons.forEach(b => b.destroy());
     this.uiButtons = [];
 
-     const editorManager = this.sys.registry.get('editorManager');
-        if (editorManager) {
-            editorManager.unregisterScene(this);
-        }
+    
         super.shutdown(); // 親のshutdownを呼ぶ
 }
 

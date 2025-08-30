@@ -100,21 +100,29 @@ export default class UIScene extends Phaser.Scene {
         const systemScene = this.scene.get('SystemScene');
         systemScene.events.on('transition-complete', this.onSceneTransition, this);
         
-        const editorManager = this.sys.registry.get('editorManager');
-        if (editorManager) {
-            editorManager.registerScene(this);
+       
+    if (stateManager.sf.debug_mode) {
+        // ★★★ オブジェクトに当たり判定とインタラクティブ設定を追加 ★★★
+        this.panel.setSize(1280, 120).setInteractive();
+        this.coinHud.setSize(150, 50).setInteractive();
+        this.playerHpBar.setSize(200, 25).setInteractive();
+        this.enemyHpBar.setSize(250, 25).setInteractive();
+        
+        // テキストや画像は setInteractive() だけでOK
+        this.menuButton.setInteractive();
 
-            // このシーンで作ったUI要素をすべて編集可能にする
-            editorManager.makeEditable(this.menuButton, this);
-
-            editorManager.makeEditable(this.coinHud, this);
-            editorManager.makeEditable(this.playerHpBar, this);
-            editorManager.makeEditable(this.enemyHpBar, this);
-            editorManager.makeEditable(this.panel, this);
-        }
-    
-        console.log("UI作成");
+        // ★★★ ドラッグ可能にする設定は、対象のシーン自身が行う ★★★
+        this.input.setDraggable([this.panel, this.coinHud, this.playerHpBar, this.enemyHpBar, this.menuButton]);
+        
+        // ホバーエフェクト
+        this.children.list.forEach(go => {
+            if (go.input) {
+                go.on('pointerover', () => go.setTint(0x00ff00));
+                go.on('pointerout', () => go.clearTint());
+            }
+        });
     }
+}
 
     // --- 以下、このクラスが持つメソッド群 ---
    onSceneTransition(newSceneKey) {
