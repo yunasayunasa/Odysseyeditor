@@ -35,7 +35,7 @@ export default class UIScene extends Phaser.Scene {
         const skipButton = this.add.text(0, 0, 'スキップ', { fontSize: '32px', fill: '#fff' }).setOrigin(0.5).setInteractive();
         
         this.panel.add([panelBg, saveButton, loadButton, backlogButton, configButton, autoButton, skipButton]);
-
+    this.panel.setSize(panelBg.width, panelBg.height);
         // --- 2. パネル内のボタンのレイアウトを確定 ---
         const buttons = [saveButton, loadButton, backlogButton, configButton, autoButton, skipButton];
         const areaStartX = 250;
@@ -92,7 +92,10 @@ export default class UIScene extends Phaser.Scene {
         this.playerHpBar = new HpBar(this, { x: 100, y: 100, width: 200, height: 25, type: 'player', stateManager: stateManager });
         // BattleSceneにしか出てこない敵HPバーもここで作ってしまう
         this.enemyHpBar = new HpBar(this, { x: this.scale.width - 100 - 250, y: 100, width: 250, height: 25, type: 'enemy', stateManager: stateManager });
-
+ this.coinHud.setSize(150, 50); 
+        // HpBarはコンストラクタで渡したサイズと同じでOK
+        this.playerHpBar.setSize(200, 25);
+        this.enemyHpBar.setSize(250, 25);
         // --- SystemSceneからの通知を受け取るリスナー ---
         const systemScene = this.scene.get('SystemScene');
         systemScene.events.on('transition-complete', this.onSceneTransition, this);
