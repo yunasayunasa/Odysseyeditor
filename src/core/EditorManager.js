@@ -5,7 +5,8 @@ export default class EditorManager {
     constructor(scene) {
         // game全体ではなく、リスナーを設定するための初期シーンを保持
         this.initialScene = scene;
-        
+        this.activeScenes = new Set(); 
+
         this.selectedObject = null;
 
         // HTMLパネルの要素を取得
