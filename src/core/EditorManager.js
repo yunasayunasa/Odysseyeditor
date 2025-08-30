@@ -1,8 +1,11 @@
 // src/core/EditorManager.js
 
 export default class EditorManager {
-    constructor(game) {
-        this.game = game;
+    // ★★★ 修正点1: コンストラクタが "game" ではなく "scene" を受け取るように変更 ★★★
+    constructor(scene) {
+        // game全体ではなく、リスナーを設定するための初期シーンを保持
+        this.initialScene = scene;
+        
         this.selectedObject = null;
 
         // HTMLパネルの要素を取得
@@ -14,13 +17,16 @@ export default class EditorManager {
             this.editorPanel.style.display = 'block';
         }
 
-        // --- ゲーム全体で一度だけ、グローバルな入力リスナーを設定 ---
-        this.game.input.on('gameobjectdown', this.onGameObjectDown, this);
-        this.game.input.on('pointerdown', this.onPointerDown, this);
-        this.game.input.on('drag', this.onDrag, this);
-        this.game.input.keyboard.on('keydown-P', this.exportLayoutToJson, this);
+        // ★★★ 修正点2: this.game.input ではなく、受け取った scene.input を使う ★★★
+        // これで 'on' is not a function エラーが解決する
+        this.initialScene.input.on('gameobjectdown', this.onGameObjectDown, this);
+        this.initialScene.input.on('pointerdown', this.onPointerDown, this);
+        this.initialScene.input.on('drag', this.onDrag, this);
         
-        console.log("[EditorManager] Initialized successfully.");
+        // キーボード入力はシーンに依存しないので、これはそのままでOK
+        this.initialScene.input.keyboard.on('keydown-P', this.exportLayoutToJson, this);
+        
+        console.log("[EditorManager] Initialized successfully via scene: " + scene.scene.key);
     }
 
     /**
@@ -32,18 +38,13 @@ export default class EditorManager {
         if (!gameObject || gameObject.isEditable) return;
         
         try {
-            // gameObject.setInteractive() は、当たり判定の形状を自動で設定しようとします。
-            // コンテナやカスタムクラスの場合、サイズが設定されていないとエラーになることがあります。
-            // その場合は、手動でサイズを指定する必要があります。
-            // 例: gameObject.setSize(width, height).setInteractive();
             gameObject.setInteractive();
-
             scene.input.setDraggable(gameObject, true);
             
             gameObject.on('pointerover', () => gameObject.setTint(0x00ff00));
             gameObject.on('pointerout', () => gameObject.clearTint());
 
-            gameObject.isEditable = true; // 二重登録防止フラグ
+            gameObject.isEditable = true;
         } catch (e) {
             console.warn(`[EditorManager] Object "${gameObject.name || 'Unnamed Object'}" could not be made interactive. Error:`, e.message);
         }
@@ -57,13 +58,13 @@ export default class EditorManager {
     }
 
     onPointerDown(pointer) {
-        // 現在ポインター下にあるオブジェクトのリストを取得
-        const hitObjects = this.game.input.hitTest(pointer, this.game.scene.getScenes(true).flatMap(scene => scene.children.list));
-        
-        // どのオブジェクトにもヒットしなかった場合、選択を解除
+        // pointer.camera.scene.children.list を使うことで、クリックされたシーンのオブジェクトのみを対象にできる
+        const hitObjects = pointer.camera.scene.input.hitTest(pointer, pointer.camera.scene.children.list, pointer.camera);
+
         if (hitObjects.length === 0) {
-            this.selectedObject = null;
-            this.updatePropertyPanel();
+             // どのシーンがクリックされたかに関わらず、選択を解除する
+             this.selectedObject = null;
+             this.updatePropertyPanel();
         }
     }
 
@@ -74,6 +75,8 @@ export default class EditorManager {
             this.updatePropertyPanel();
         }
     }
+
+   
 
     /**
      * プロパティ編集パネルの表示を更新する
@@ -175,11 +178,13 @@ export default class EditorManager {
     /**
      * ゲーム終了時にイベントリスナーをクリーンアップする
      */
-    shutdown() {
-        this.game.input.off('gameobjectdown', this.onGameObjectDown, this);
-        this.game.input.off('pointerdown', this.onPointerDown, this);
-        this.game.input.off('drag', this.onDrag, this);
-        this.game.input.keyboard.off('keydown-P', this.exportLayoutToJson, this);
+       shutdown() {
+        if (!this.initialScene) return;
+        
+        this.initialScene.input.off('gameobjectdown', this.onGameObjectDown, this);
+        this.initialScene.input.off('pointerdown', this.onPointerDown, this);
+        this.initialScene.input.off('drag', this.onDrag, this);
+        this.initialScene.input.keyboard.off('keydown-P', this.exportLayoutToJson, this);
         
         if (this.editorPanel) {
             this.editorPanel.style.display = 'none';
