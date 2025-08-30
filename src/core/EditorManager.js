@@ -30,7 +30,7 @@ export default class EditorManager {
         console.log("[EditorManager] Initialized successfully via scene: " + scene.scene.key);
     }
 
-    /**
+   /**
      * ゲームオブジェクトを編集可能にする
      * @param {Phaser.GameObjects.GameObject} gameObject 
      * @param {Phaser.Scene} scene - オブジェクトが所属するシーン
@@ -39,8 +39,15 @@ export default class EditorManager {
         if (!gameObject || gameObject.isEditable) return;
         
         try {
+            // setInteractive() は、オブジェクト自身に設定するものなので、これでOK
             gameObject.setInteractive();
-            scene.input.setDraggable(gameObject, true);
+
+            // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+            // ★★★ これがキャラクターを修正する核心部 ★★★
+            // ★★★ "scene.input" ではなく "this.initialScene.input" を使う ★★★
+            // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+            // EditorManagerが知っている唯一の入力システムに、ドラッグ設定を依頼する
+            this.initialScene.input.setDraggable(gameObject, true);
             
             gameObject.on('pointerover', () => gameObject.setTint(0x00ff00));
             gameObject.on('pointerout', () => gameObject.clearTint());
