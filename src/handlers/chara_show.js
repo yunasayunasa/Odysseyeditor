@@ -61,13 +61,10 @@ export function handleCharaShow(manager, params) {
         // ★★★ 管理リストに登録。セーブ時はこのオブジェクトが参照される ★★★
         manager.scene.characters[name] = chara;
 
-     const stateManager = manager.scene.sys.registry.get('stateManager');
-if (stateManager.sf.debug_mode) {
-    chara.setInteractive();
+  if (stateManager.sf.debug_mode) {
+    // ★★★ 当たり判定の形状を指定する ★★★
+    chara.setInteractive(new Phaser.Geom.Rectangle(0, 0, chara.width, chara.height), Phaser.Geom.Rectangle.Contains);
     manager.scene.input.setDraggable(chara, true);
-    chara.on('pointerover', () => chara.setTint(0x00ff00));
-    chara.on('pointerout', () => chara.clearTint());
-}
         // --- 4. アニメーション ---
         const time = Number(params.time) || 0;
 

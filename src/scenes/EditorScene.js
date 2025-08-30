@@ -13,7 +13,7 @@ export default class EditorScene extends Phaser.Scene {
         console.log("[EditorScene] Created and brought to top.");
         // このシーンを常に最前面に描画する
         this.scene.bringToTop();
-
+  this.input.topOnly = false;
         // HTMLパネルの要素を取得・表示
         this.editorPanel = document.getElementById('editor-panel');
         this.editorTitle = document.getElementById('editor-title');
@@ -25,11 +25,20 @@ export default class EditorScene extends Phaser.Scene {
         // --- このシーンで、ゲーム全体の入力を一元的にリッスンする ---
 
         // オブジェクトがクリックされた時の処理
-        this.input.on('gameobjectdown', (pointer, gameObject) => {
-            // 選択されたオブジェクトを記録し、プロパティパネルを更新
-            this.selectedObject = gameObject;
-            this.updatePropertyPanel();
+         this.input.on('pointerdown', (pointer) => {
+            const hitObjects = this.input.hitTest(pointer, this.getAllGameObjects(), pointer.camera);
+            
+            if (hitObjects.length > 0) {
+                // オブジェクトにヒットした場合
+                this.selectedObject = hitObjects[0]; // 最も手前のオブジェクトを選択
+                this.updatePropertyPanel();
+            } else {
+                // 何にもヒットしなかった場合
+                this.selectedObject = null;
+                this.updatePropertyPanel();
+            }
         });
+
         
         // オブジェクトがドラッグされている間の処理
         this.input.on('drag', (pointer, gameObject, dragX, dragY) => {
@@ -42,20 +51,7 @@ export default class EditorScene extends Phaser.Scene {
             }
         });
 
-        // 何もない場所がクリックされた時の処理
-        this.input.on('pointerdown', (pointer) => {
-            // マウスのボタンが押されていない場合は無視（予期せぬ動作の防止）
-            if (pointer.noButtonDown()) return;
-            
-            // 現在のポインター位置にあるオブジェクトを全シーンから検索
-            const hitObjects = this.input.hitTest(pointer, this.getAllGameObjects(), pointer.camera);
-            
-            // どのオブジェクトにもヒットしなかった場合、選択を解除
-            if (hitObjects.length === 0) {
-                this.selectedObject = null;
-                this.updatePropertyPanel();
-            }
-        });
+      
     }
 
     /**
