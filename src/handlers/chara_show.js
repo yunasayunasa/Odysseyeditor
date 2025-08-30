@@ -61,8 +61,10 @@ export function handleCharaShow(manager, params) {
         // ★★★ 管理リストに登録。セーブ時はこのオブジェクトが参照される ★★★
         manager.scene.characters[name] = chara;
 
-        // ★★★ StateManagerに関する処理はすべて不要なので削除 ★★★
-
+       const editorManager = manager.scene.sys.registry.get('editorManager');
+if (editorManager) {
+    editorManager.makeEditable(chara, manager.scene);
+}
         // --- 4. アニメーション ---
         const time = Number(params.time) || 0;
 

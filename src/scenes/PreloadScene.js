@@ -45,6 +45,12 @@ export default class PreloadScene extends Phaser.Scene {
         
         const stateManager = new StateManager();
         this.sys.registry.set('stateManager', stateManager);
+
+          const stateManager = this.registry.get('stateManager');
+        if (stateManager.sf.debug_mode) {
+            const editorManager = new EditorManager(this.game);
+            this.registry.set('editorManager', editorManager);
+        }
         // --- asset_define.jsonに基づいて残りのアセットをロードキューに追加 ---
         const assetDefine = this.cache.json.get('asset_define');
         for (const key in assetDefine.images) { this.load.image(key, assetDefine.images[key]); }

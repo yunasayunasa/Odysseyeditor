@@ -74,6 +74,11 @@ export default class GameScene extends Phaser.Scene {
         // --- マネージャー/UIクラスの生成 ---
         this.configManager = this.sys.registry.get('configManager');
         this.stateManager = this.sys.registry.get('stateManager'); 
+          const editorManager = this.sys.registry.get('editorManager');
+        if (editorManager) {
+            editorManager.registerScene(this);
+        }
+        
            // ★★★ 修正箇所: SoundManagerをnewするのではなく、Registryから取得 ★★★
         this.soundManager = this.sys.registry.get('soundManager');
         this.messageWindow = new MessageWindow(this, this.soundManager, this.configManager);
@@ -145,13 +150,11 @@ export default class GameScene extends Phaser.Scene {
     this.uiButtons.forEach(b => b.destroy());
     this.uiButtons = [];
 
-    // 4. ★★★★★ このシーンが管理するBGMを停止しない ★★★★★
-    // BGMの管理はSystemSceneと各シーンのcreateに任せるため、この行をコメントアウトまたは削除
-    // if (this.soundManager) {
-    //     this.soundManager.stopBgm(0); 
-    // }
-    
-    super.shutdown(); // Phaser.Sceneの親シャットダウン処理を呼ぶ
+     const editorManager = this.sys.registry.get('editorManager');
+        if (editorManager) {
+            editorManager.unregisterScene(this);
+        }
+        super.shutdown(); // 親のshutdownを呼ぶ
 }
 
       // ★★★ 修正箇所: onFVariableChanged, updatePlayerHpBar, updateCoinHudを削除し、onFVariableChangedに一本化 ★★★

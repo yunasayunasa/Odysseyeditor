@@ -97,7 +97,19 @@ export default class UIScene extends Phaser.Scene {
         const systemScene = this.scene.get('SystemScene');
         systemScene.events.on('transition-complete', this.onSceneTransition, this);
         
-       
+        const editorManager = this.sys.registry.get('editorManager');
+        if (editorManager) {
+            editorManager.registerScene(this);
+
+            // このシーンで作ったUI要素をすべて編集可能にする
+            editorManager.makeEditable(this.menuButton, this);
+
+            editorManager.makeEditable(this.coinHud, this);
+            editorManager.makeEditable(this.playerHpBar, this);
+            editorManager.makeEditable(this.enemyHpBar, this);
+            editorManager.makeEditable(this.panel, this);
+        }
+    
         console.log("UI作成");
     }
 
@@ -165,5 +177,11 @@ export default class UIScene extends Phaser.Scene {
         if (systemScene) {
             systemScene.events.off('transition-complete', this.onSceneTransition, this);
         }
+    
+      const editorManager = this.sys.registry.get('editorManager');
+        if (editorManager) {
+            editorManager.unregisterScene(this);
+        }
+        super.shutdown(); // 親のshutdownを呼ぶ
     }
 }
