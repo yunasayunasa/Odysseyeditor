@@ -175,6 +175,24 @@ export default class EditorManager {
         });
     }
 
+   /**
+     * シーンをエディタの管理対象に追加する
+     * @param {Phaser.Scene} scene 
+     */
+    registerScene(scene) {
+        this.activeScenes.add(scene);
+        console.log(`[EditorManager] Scene registered: ${scene.scene.key}`);
+    }
+
+    /**
+     * シーンをエディタの管理対象から解除する
+     * @param {Phaser.Scene} scene 
+     */
+    unregisterScene(scene) {
+        this.activeScenes.delete(scene);
+        console.log(`[EditorManager] Scene unregistered: ${scene.scene.key}`);
+    }
+
     /**
      * ゲーム終了時にイベントリスナーをクリーンアップする
      */
