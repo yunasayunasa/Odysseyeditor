@@ -64,7 +64,7 @@ export function handleCharaShow(manager, params) {
   if (stateManager.sf.debug_mode) {
     // ★★★ 当たり判定の形状を指定する ★★★
     chara.setInteractive(new Phaser.Geom.Rectangle(0, 0, chara.width, chara.height), Phaser.Geom.Rectangle.Contains);
-    manager.scene.input.setDraggable(chara, true);
+    manager.scene.input.setDraggable(chara, true);}
         // --- 4. アニメーション ---
         const time = Number(params.time) || 0;
 
