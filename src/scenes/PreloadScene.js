@@ -33,6 +33,7 @@ export default class PreloadScene extends Phaser.Scene {
         // --- 2. 最初に必要なアセットのみをロード ---
         this.load.json('asset_define', 'assets/asset_define.json');
          this.load.json('ui_define', 'assets/ui_define.json');
+          this.load.json('layout_data', 'assets/data/layout.json');
         this.load.script('webfont', 'https://ajax.googleapis.com/ajax/libs/webfont/1.6.26/webfont.js');
     }
 

@@ -53,14 +53,27 @@ export function handleCharaShow(manager, params) {
         if (manager.scene.characters[name]) {
             manager.scene.characters[name].destroy();
         }
+    const layoutData = manager.scene.cache.json.get('layout_data');
+        const gameLayout = layoutData.GameScene ? layoutData.GameScene.objects : [];
+        const layout = gameLayout.find(obj => obj.name === params.name);
 
-        const chara = manager.scene.add.image(x, y, storage);
-         chara.name = name; 
-        chara.setAlpha(0);
+        // --- 3. 表示処理 ---
+        const chara = manager.scene.add.image(x, y, storage); // まずはデフォルト位置で生成
+        chara.name = params.name;
+
+        if (layout) {
+            // レイアウトデータがあれば、その情報で上書き
+            chara.setPosition(layout.x, layout.y);
+            chara.setScale(layout.scaleX, layout.scaleY);
+            chara.setAngle(layout.angle);
+            chara.setAlpha(0); // フェードインのために一度透明にする
+        } else {
+            // なければアルファだけ設定
+            chara.setAlpha(0);
+        }
+
         manager.layers.character.add(chara);
-        
-        // ★★★ 管理リストに登録。セーブ時はこのオブジェクトが参照される ★★★
-        manager.scene.characters[name] = chara;
+        manager.scene.characters[params.name] = chara;
   const stateManager = manager.scene.sys.registry.get('stateManager');
     if (stateManager.sf.debug_mode) {
         const editor = manager.scene.plugins.get('EditorPlugin');

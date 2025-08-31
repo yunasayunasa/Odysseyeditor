@@ -22,6 +22,8 @@ export default class UIScene extends Phaser.Scene {
         
         const stateManager = this.sys.registry.get('stateManager');
         const uiDefine = this.cache.json.get('ui_define');
+             const layoutData = this.cache.json.get('layout_data');
+        const uiLayout = layoutData.UIScene ? layoutData.UIScene.objects : [];
         const uiElementsDefine = uiDefine.UIScene.elements;
         
         for (const elementDef of uiElementsDefine) {
@@ -50,7 +52,23 @@ export default class UIScene extends Phaser.Scene {
             
             uiElement.name = elementDef.name;
             this[elementDef.name] = uiElement;
+                 if (uiElement) {
+                uiElement.name = elementDef.name;
+                this[elementDef.name] = uiElement;
+
+                // layout.json にこのオブジェクトのデータがあるか探す
+                const layout = uiLayout.find(obj => obj.name === elementDef.name);
+                if (layout) {
+                    // データがあれば、その座標やスケールを適用する
+                    uiElement.setPosition(layout.x, layout.y);
+                    uiElement.setScale(layout.scaleX, layout.scaleY);
+                    uiElement.setAngle(layout.angle);
+                    uiElement.setAlpha(layout.alpha);
+                }
+            }
         }
+        
+        
      if (this.bottom_panel) {
             // ★★★ 修正点1: パネルのDepthを設定 ★★★
             // 他のUIよりは手前だが、メニューボタンよりは奥に描画する
