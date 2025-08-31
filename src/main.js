@@ -14,9 +14,9 @@ import EditorPlugin from './plugins/EditorPlugin.js';
 const config = {
     type: Phaser.AUTO,
     scale: {
-        mode: Phaser.Scale.RESIZE,
+        mode: Phaser.Scale.RESIZE,//開発中のみRESIZEを使用して、"?debug=true&edit"を末尾に貼り付けることでエディタモードに入れます。完成後はFIT推奨です。
         parent: 'game-container', // ゲームキャンバスの親要素IDを指定
-        //autoCenter: Phaser.Scale.CENTER_BOTH,
+        //autoCenter: Phaser.Scale.CENTER_BOTH,//完成後はここの最前コメントアウトを外してください。
         
         width: 1280,
         height: 720
