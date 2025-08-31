@@ -1,114 +1,72 @@
 // src/scenes/UIScene.js
 
 import { CUSTOM_UI_MAP } from '../ui/index.js';
-import BaseGameScene from './BaseGameScene.js'; 
+import BaseGameScene from './BaseGameScene.js';
+
 export default class UIScene extends BaseGameScene {
     
     constructor() {
         super({ key: 'UIScene' });
-        
-        this.coin_hud = null;
-        this.player_hp_bar = null;
-        this.enemy_hp_bar = null;
-        this.menu_button = null;
-        this.bottom_panel = null;
-        
         this.isPanelOpen = false;
     }
 
     create() {
-        console.log("UIScene: データ駆動型アーキテクチャでUIを生成します。");
+        console.log("UIScene: create started.");
         this.scene.bringToTop();
+        
+        // ★★★ 親の汎用ルーチンを呼び出すだけ！ ★★★
+        // これが UIScene.json を読み込み、buildSceneFromLayout を呼び出してくれる
         this.applyLayoutAndPhysics();
-        const stateManager = this.sys.registry.get('stateManager');
-        const uiDefine = this.cache.json.get('ui_define');
-             const layoutData = this.cache.json.get('layout_data');
-        const uiLayout = layoutData.UIScene ? layoutData.UIScene.objects : [];
-        const uiElementsDefine = uiDefine.UIScene.elements;
-        
-        for (const elementDef of uiElementsDefine) {
-            let uiElement = null;
-            const params = elementDef.params;
-            const type = elementDef.type;
-            
-            const CustomUIClass = CUSTOM_UI_MAP[type];
+    }
 
-            if (CustomUIClass) {
-                uiElement = new CustomUIClass(this, { ...params, stateManager });
-            } else {
-                switch (type) {
-                    case 'Text':
-                        uiElement = this.add.text(params.x, params.y, params.text, params.style).setOrigin(0.5);
-                        break;
-                    case 'Panel':
-                        // ★★★ 変更点1: ここではパネルの「器」だけを生成する ★★★
-                        uiElement = this.createBottomPanel();
-                        break;
-                    default:
-                        console.warn(`[UIScene] ui_define.json で未定義のUIタイプです: ${type}`);
-                        continue;
-                }
-            }
-            
-            uiElement.name = elementDef.name;
-            this[elementDef.name] = uiElement;
-                 if (uiElement) {
-                uiElement.name = elementDef.name;
-                this[elementDef.name] = uiElement;
+    /**
+     * UIScene専用のオブジェクト生成ロジック
+     * (BaseGameSceneのメソッドをオーバーライド)
+     */
+    createObjectFromLayout(layout) {
+        let uiElement = null;
+        const stateManager = this.registry.get('stateManager');
+        const CustomUIClass = CUSTOM_UI_MAP[layout.type];
 
-                // layout.json にこのオブジェクトのデータがあるか探す
-                const layout = uiLayout.find(obj => obj.name === elementDef.name);
-                if (layout) {
-                    // データがあれば、その座標やスケールを適用する
-                    uiElement.setPosition(layout.x, layout.y);
-                    uiElement.setScale(layout.scaleX, layout.scaleY);
-                    uiElement.setAngle(layout.angle);
-                    uiElement.setAlpha(layout.alpha);
-                }
+        if (CustomUIClass) {
+            uiElement = new CustomUIClass(this, { ...layout.params, stateManager });
+        } else {
+            switch (layout.type) {
+                case 'Text':
+                    uiElement = this.add.text(layout.x, layout.y, layout.params.text, layout.params.style).setOrigin(0.5);
+                    break;
+                case 'Panel':
+                    uiElement = this.createBottomPanel();
+                    break;
             }
         }
-        
-        
-     if (this.bottom_panel) {
-            // ★★★ 修正点1: パネルのDepthを設定 ★★★
-            // 他のUIよりは手前だが、メニューボタンよりは奥に描画する
-            this.bottom_panel.setDepth(1); 
+
+        if (uiElement) {
+            // 親のapplyPropertiesを呼び出す前に、シーンのプロパティとして登録
+            this[layout.name] = uiElement;
         }
 
-        if (this.menu_button) {
-            // ★★★ 修正点2: メニューボタンを最前面に設定 ★★★
-            this.menu_button.setDepth(2);
-        }
-        // ★★★ 変更点2: 全てのUI要素が生成された後で、イベントリスナーを一括設定 ★★★
+        return uiElement; // 生成したオブジェクトを親に返す
+    }
+    
+    /**
+     * UIScene専用の最終セットアップ
+     * (BaseGameSceneのメソッドをオーバーライド)
+     */
+    finalizeSetup() {
+        // 全てのオブジェクトが生成された後に、イベントリスナーとDepthを設定
         this.assignEventListeners();
-
-        // --- エディタプラグインに、生成した全てのUIを登録 ---
-        if (stateManager.sf.debug_mode) {
-            const editor = this.plugins.get('EditorPlugin');
-            if (editor) {
-                for (const elementDef of uiElementsDefine) {
-                    const element = this[elementDef.name];
-                    if (element) {
-                        if (element instanceof Phaser.GameObjects.Container) {
-                             if(element.name === 'bottom_panel') element.setSize(1280, 120);
-                             else if(element.name === 'coin_hud') element.setSize(150, 50);
-                             else if(element.name === 'player_hp_bar') element.setSize(200, 25);
-                             else if(element.name === 'enemy_hp_bar') element.setSize(250, 25);
-                        }
-                        editor.makeEditable(element, this);
-                    }
-                }
-            }
-        }
         
+        if (this.bottom_panel) this.bottom_panel.setDepth(1);
+        if (this.menu_button) this.menu_button.setDepth(2);
+
         const systemScene = this.scene.get('SystemScene');
         if (systemScene) {
             systemScene.events.on('transition-complete', this.onSceneTransition, this);
         }
-        
-      
 
-        console.log("UIScene: UI生成完了");
+        // UISceneはSystemSceneに直接管理されるので、'scene-ready'は発行しない
+        console.log(`[${this.scene.key}] Setup complete.`);
     }
 
     /**
