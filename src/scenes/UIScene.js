@@ -94,96 +94,151 @@ export default class UIScene extends Phaser.Scene {
      * ゲーム内メニューパネルの器と中身を生成するヘルパーメソッド（イベントリスナーは設定しない）
      * @returns {Phaser.GameObjects.Container} 生成されたパネルコンテナ
      */
+      /**
+     * ゲーム内メニューパネルの器と中身を生成するヘルパーメソッド（イベントリスナーは設定しない）
+     * @returns {Phaser.GameObjects.Container} 生成されたパネルコンテナ
+     */
     createBottomPanel() {
         const gameWidth = 1280;
         const gameHeight = 720;
         
+        // パネルコンテナの基準点を画面中央下部（画面外）に設定
         const panel = this.add.container(gameWidth / 2, gameHeight + 60);
+        
+        // パネルの背景
         const panelBg = this.add.rectangle(0, 0, gameWidth, 120, 0x000000, 0.8);
         
+        // ボタンの共通スタイル
         const buttonStyle = { fontSize: '32px', fill: '#fff' };
+
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        // ★★★ ここからが修正箇所です ★★★
+        // ★★★ オートボタンとスキップボタンを復活させます ★★★
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+
+        // --- 全てのボタンを生成 ---
         const saveButton = this.add.text(0, 0, 'セーブ', buttonStyle).setOrigin(0.5);
         const loadButton = this.add.text(0, 0, 'ロード', buttonStyle).setOrigin(0.5);
         const backlogButton = this.add.text(0, 0, '履歴', buttonStyle).setOrigin(0.5);
         const configButton = this.add.text(0, 0, '設定', buttonStyle).setOrigin(0.5);
+        const autoButton = this.add.text(0, 0, 'オート', buttonStyle).setOrigin(0.5);
+        const skipButton = this.add.text(0, 0, 'スキップ', buttonStyle).setOrigin(0.5);
         
-        // ★★★ ボタンにも名前をつけておくことで、後からイベントを設定しやすくなる ★★★
+        // --- ボタンに、後から参照するための名前を設定 ---
         saveButton.name = 'save_button';
         loadButton.name = 'load_button';
         backlogButton.name = 'backlog_button';
         configButton.name = 'config_button';
+        autoButton.name = 'auto_button';
+        skipButton.name = 'skip_button';
         
-        panel.add([panelBg, saveButton, loadButton, backlogButton, configButton]);
+        // --- 生成した全ての要素をパネルコンテナに追加 ---
+        panel.add([
+            panelBg,
+            saveButton, loadButton, backlogButton, configButton, autoButton, skipButton
+        ]);
 
-        const buttons = [saveButton, loadButton, backlogButton, configButton];
-        const totalWidth = 600;
-        const startX = -totalWidth / 2;
-        const buttonMargin = totalWidth / (buttons.length - 1);
+        // --- ボタンのレイアウトを自動計算して配置 ---
+        const buttons = [saveButton, loadButton, backlogButton, configButton, autoButton, skipButton];
         
+        // MENUボタンの領域を除いた、ボタン配置可能エリアの計算
+        const areaStartX = 250;
+        const areaEndX = gameWidth - 100;
+        const areaWidth = areaEndX - areaStartX;
+
+        // ボタン間のマージンを均等に計算
+        const buttonMargin = areaWidth / (buttons.length);
+
+        // 各ボタンを正しいX座標に配置
         buttons.forEach((button, index) => {
-            button.setX(startX + (buttonMargin * index));
+            // パネルコンテナの基準点(0,0)からの相対座標で設定
+            const buttonX = (areaStartX - gameWidth / 2) + (buttonMargin * index) + (buttonMargin / 2);
+            button.setX(buttonX);
         });
         
         return panel;
     }
     
-      /**
+       /**
      * UI要素のイベントリスナーをまとめて設定するヘルパーメソッド
      */
     assignEventListeners() {
         // --- メインのMENUボタン ---
         if (this.menu_button) {
-            this.menu_button.setInteractive().on('pointerdown', (pointer) => {
+            // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+            // ★★★ ここが修正箇所です (1/6) ★★★
+            // ★★★ コールバック関数に第2引数 'event' を追加します ★★★
+            // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+            this.menu_button.setInteractive().on('pointerdown', (pointer, localX, localY, event) => {
                 this.togglePanel();
-                // イベントが背後のオブジェクト（キャラクターなど）に伝わらないようにする
-                pointer.stopPropagation();
+                // ★★★ 'pointer' ではなく 'event' を使います ★★★
+                event.stopPropagation();
             });
         }
         
-        // --- 下部パネルとその中の要素 ---
         if (this.bottom_panel) {
-            // パネルの背景自体をクリックしても、ゲームが反応しないようにする
-            const panelBg = this.bottom_panel.list[0]; // listの0番目が背景のrectangle
+            const panelBg = this.bottom_panel.list[0];
             if (panelBg) {
-                panelBg.setInteractive().on('pointerdown', (pointer) => {
-                    pointer.stopPropagation();
+                // ★★★ 修正箇所 (2/6) ★★★
+                panelBg.setInteractive().on('pointerdown', (pointer, localX, localY, event) => {
+                    event.stopPropagation();
                 });
             }
 
-            // --- パネル内の各ボタンにイベントを設定 ---
-            // 'save_button' という名前を持つオブジェクトを探して、イベントを設定
             const saveButton = this.bottom_panel.list.find(obj => obj.name === 'save_button');
             if(saveButton) {
-                saveButton.setInteractive().on('pointerdown', (pointer) => {
+                // ★★★ 修正箇所 (3/6) ★★★
+                saveButton.setInteractive().on('pointerdown', (pointer, localX, localY, event) => {
                     console.log('Save button clicked');
-                    pointer.stopPropagation();
+                    event.stopPropagation();
                 });
             }
 
-            // 'load_button' という名前を持つオブジェクトを探して、イベントを設定
             const loadButton = this.bottom_panel.list.find(obj => obj.name === 'load_button');
             if(loadButton) {
-                loadButton.setInteractive().on('pointerdown', (pointer) => {
+                // ★★★ 修正箇所 (4/6) ★★★
+                loadButton.setInteractive().on('pointerdown', (pointer, localX, localY, event) => {
                     console.log('Load button clicked');
-                    pointer.stopPropagation();
+                    event.stopPropagation();
                 });
             }
 
-            // 'backlog_button' という名前を持つオブジェクトを探して、イベントを設定
             const backlogButton = this.bottom_panel.list.find(obj => obj.name === 'backlog_button');
             if(backlogButton) {
-                backlogButton.setInteractive().on('pointerdown', (pointer) => {
+                // ★★★ 修正箇所 (5/6) ★★★
+                backlogButton.setInteractive().on('pointerdown', (pointer, localX, localY, event) => {
                     console.log('Backlog button clicked');
-                    pointer.stopPropagation();
+                    event.stopPropagation();
                 });
             }
 
-            // 'config_button' という名前を持つオブジェクトを探して、イベントを設定
             const configButton = this.bottom_panel.list.find(obj => obj.name === 'config_button');
             if(configButton) {
-                configButton.setInteractive().on('pointerdown', (pointer) => {
+                // ★★★ 修正箇所 (6/6) ★★★
+                configButton.setInteractive().on('pointerdown', (pointer, localX, localY, event) => {
                     console.log('Config button clicked');
-                    pointer.stopPropagation();
+                    event.stopPropagation();
+                });
+            }
+            // assignEventListeners() の 'configButton' の処理の後に追加
+
+            // 'auto_button' という名前を持つオブジェクトを探して、イベントを設定
+            const autoButton = this.bottom_panel.list.find(obj => obj.name === 'auto_button');
+            if(autoButton) {
+                autoButton.setInteractive().on('pointerdown', (pointer, localX, localY, event) => {
+                    console.log('Auto button clicked');
+                    // ここにオートモード切り替え処理を実装
+                    event.stopPropagation();
+                });
+            }
+
+            // 'skip_button' という名前を持つオブジェクトを探して、イベントを設定
+            const skipButton = this.bottom_panel.list.find(obj => obj.name === 'skip_button');
+            if(skipButton) {
+                skipButton.setInteractive().on('pointerdown', (pointer, localX, localY, event) => {
+                    console.log('Skip button clicked');
+                    // ここにスキップモード切り替え処理を実装
+                    event.stopPropagation();
                 });
             }
         }

@@ -55,6 +55,7 @@ export function handleCharaShow(manager, params) {
         }
 
         const chara = manager.scene.add.image(x, y, storage);
+         chara.name = name; 
         chara.setAlpha(0);
         manager.layers.character.add(chara);
         
