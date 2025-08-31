@@ -82,7 +82,7 @@ export function handleCharaShow(manager, params) {
     
         if (editor) {
             editor.makeEditable(chara, manager.scene);
-        }
+        }}
         // --- 4. アニメーション ---
         const time = Number(params.time) || 0;
 
