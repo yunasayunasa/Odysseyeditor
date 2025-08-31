@@ -14,9 +14,9 @@ import EditorPlugin from './plugins/EditorPlugin.js';
 const config = {
     type: Phaser.AUTO,
     scale: {
-        mode: Phaser.Scale.FIT,
+        mode: Phaser.Scale.RESIZE,
         parent: 'game-container', // ゲームキャンバスの親要素IDを指定
-        autoCenter: Phaser.Scale.CENTER_BOTH,
+        //autoCenter: Phaser.Scale.CENTER_BOTH,
         
         width: 1280,
         height: 720

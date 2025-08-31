@@ -116,9 +116,17 @@ export default class GameScene extends Phaser.Scene {
             console.log("GameScene: 通常起動完了。ロード完了イベントを発行しました。(遅延発行)");
         });
         this.time.delayedCall(10, () => this.scenarioManager.next());
+
+
     }
+          this.input.on('pointerdown', () => {
+                if (this.scenarioManager) {
+                    this.scenarioManager.onClick();
+                }
+            });
      
-        }
+        } // ← create メソッドの終わり
+        
     // ★★★ 修正箇所: stop()メソッドを一つに統一し、全てのクリーンアップを行う ★★★
     shutdown() {
     console.log("GameScene: shutdown されました。全てのマネージャーとリソースを停止・破棄します。");
