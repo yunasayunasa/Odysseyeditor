@@ -73,7 +73,9 @@ export default class BaseGameScene extends Phaser.Scene {
         gameObject.setScale(layout.scaleX, layout.scaleY);
         gameObject.setAngle(layout.angle);
         gameObject.setAlpha(layout.alpha);
-
+if (layout.visible !== undefined) {
+            gameObject.setVisible(layout.visible);
+        }
         // 物理プロパティを適用
         if (layout.physics) {
             const phys = layout.physics;
