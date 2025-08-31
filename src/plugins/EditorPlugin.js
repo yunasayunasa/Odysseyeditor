@@ -41,16 +41,24 @@ export default class EditorPlugin extends Phaser.Plugins.BasePlugin {
         scene.input.setDraggable(gameObject);
 
         // --- オブジェクトに個別のイベントリスナーを設定 (ここから下は変更なし) ---
-        gameObject.on('pointerdown', (pointer) => {
-            this.isDragging = false; 
-            setTimeout(() => {
-                if (!this.isDragging) {
-                    this.selectedObject = gameObject;
-                    this.updatePropertyPanel();
-                }
-            }, 100);
-        });
-        gameObject.on('dragstart', (pointer) => { this.isDragging = true; });
+      gameObject.on('pointerdown', (pointer) => {
+        // ドラッグ操作かどうかを待つ必要はない。
+        // クリックされた瞬間に、まずオブジェクトを選択状態にする。
+        this.selectedObject = gameObject;
+        
+        // そして、即座にプロパティパネルを更新する！
+        this.updatePropertyPanel();
+    });
+
+    // 2. オブジェクトのドラッグが開始された瞬間のイベント
+    // (このイベントリスナーは、以前のままでも良いですが、
+    //  クリック処理からisDraggingフラグが消えたので、ここもシンプルにします)
+    //  このリスナー自体が不要になる場合もありますが、念のため残します。
+    gameObject.on('dragstart', (pointer) => {
+        // ドラッグが開始されたことを示すログ（デバッグ用）
+        // console.log('Drag started on:', gameObject.name);
+    });
+        
         gameObject.on('drag', (pointer, dragX, dragY) => {
             gameObject.x = Math.round(dragX);
 gameObject.y = Math.round(dragY);
