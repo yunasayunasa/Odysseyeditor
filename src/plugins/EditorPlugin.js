@@ -299,34 +299,59 @@ export default class EditorPlugin extends Phaser.Plugins.BasePlugin {
     /**
      * 物理パラメータを編集するためのUIを生成する（最終確定版）
      */
-    createPhysicsPropertiesUI(gameObject) {
+   createPhysicsPropertiesUI(gameObject) {
         const body = gameObject.body;
         
         // --- ボディタイプ (Static / Dynamic) の切り替え ---
         const isStatic = body.isStatic;
         
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-        // ★★★ これが 'Is Static' を修正する最後のコードです ★★★
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        // ★★★ ここに、最後のログ爆弾を仕掛けます ★★★
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
         this.createCheckbox(this.physicsPropsContainer, 'Is Static Body', isStatic, (isChecked) => {
-            // isCheckedには、チェックボックスの「新しい」状態(true/false)が入っている
-            if (this.selectedObject) {
-                const targetScene = this.selectedObject.scene;
-                
-                // 1. まず、現在のボディを物理ワールドから削除する
-                targetScene.physics.world.remove(this.selectedObject.body);
-                
-                // 2. 新しい状態でボディを再生成する
-                targetScene.physics.add.existing(this.selectedObject, isChecked); // isChecked = trueなら静的, falseなら動的
-                
-                // 3. 新しく作られたボディに、デフォルト設定を適用
-                if (this.selectedObject.body) {
-                    this.selectedObject.body.collideWorldBounds = true;
-                }
-                
-                // 4. 最後に、パネル全体を再描画して、UIを最新の状態に更新する
-                this.updatePropertyPanel();
+
+            // --- ログ爆弾フェーズ1: イベント発生の確認 ---
+            console.log("💣💥 STATIC BOMB - PHASE 1: Checkbox event fired!");
+            console.log(`💣 Checkbox's new state (isChecked): ${isChecked}`);
+
+            if (!this.selectedObject) {
+                console.error("💣💥 BOMB DEFUSED: this.selectedObject is null for some reason.");
+                return;
             }
+            console.log(`💣 Selected Object: '${this.selectedObject.name}'`);
+            
+            if (!this.selectedObject.body) {
+                console.error("💣💥 BOMB DEFUSED: this.selectedObject.body is null. Cannot proceed.");
+                return;
+            }
+            console.log(`💣 Current body.isStatic value (before change): ${this.selectedObject.body.isStatic}`);
+
+            // --- ログ爆弾フェーズ2: 物理ワールドからの削除 ---
+            console.log("💣💥 STATIC BOMB - PHASE 2: Removing old body from physics world...");
+            const targetScene = this.selectedObject.scene;
+            targetScene.physics.world.remove(this.selectedObject.body);
+            console.log(`💣 Old body removed. Does a body still exist?`, !!this.selectedObject.body);
+
+
+            // --- ログ爆弾フェーズ3: 新しいボディの再生成 ---
+            console.log("💣💥 STATIC BOMB - PHASE 3: Re-adding object to physics with new state...");
+            // isChecked (チェックボックスの新しい状態) を使って再生成
+            targetScene.physics.add.existing(this.selectedObject, isChecked); 
+            
+            if (!this.selectedObject.body) {
+                console.error("💣💥 BOMB DEFUSED: Failed to re-create a new body!");
+                return;
+            }
+            console.log(`💣 New body re-created. New body.isStatic value: ${this.selectedObject.body.isStatic}`);
+            
+
+            // --- ログ爆弾フェーズ4: デフォルト設定の適用とUI更新 ---
+            console.log("💣💥 STATIC BOMB - PHASE 4: Applying defaults and updating panel...");
+            this.selectedObject.body.collideWorldBounds = true;
+            console.log(`💣 Set collideWorldBounds on new body.`);
+            
+            this.updatePropertyPanel();
+            console.log("💣💥 BOMB SEQUENCE COMPLETE. Panel has been updated.");
         });
 
         // --- 動的ボディの場合のみ、他のプロパティを表示 ---
