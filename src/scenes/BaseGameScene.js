@@ -21,34 +21,59 @@ export default class BaseGameScene extends Phaser.Scene {
     /**
      * 読み込み済みのレイアウトデータを使って、シーンを構築する
      */
-      buildSceneFromLayout(layoutData) {
+  // src/scenes/BaseGameScene.js
+
+    buildSceneFromLayout(layoutData) {
         const sceneKey = this.scene.key;
-        if (!layoutData || !layoutData.objects) {
+
+        // --- ログ爆弾フェーズ1: メソッド開始とデータチェック ---
+        console.log(`💣💥 FINAL BOMB - PHASE 1: buildSceneFromLayout called for '${sceneKey}'`);
+        if (!layoutData || !layoutData.objects || layoutData.objects.length === 0) {
+            console.warn(`💣💥 BOMB INFO: No layout objects found for '${sceneKey}'. Skipping build.`);
             this.finalizeSetup();
             return;
         }
 
-        console.log(`[${sceneKey}] Building scene from layout data...`);
-        
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-        // ★★★ これが最後のアーキテクチャ修正です ★★★
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        console.log(`💣 Found ${layoutData.objects.length} objects to process.`);
 
-        // 1. まず、JSONに基づいて全てのオブジェクトを「生成」だけして、配列に溜め込む
         const createdObjects = [];
-        for (const layout of layoutData.objects) {
-            const gameObject = this.createObjectFromLayout(layout);
-            if (gameObject) {
-                // 親子関係が壊れないように、プロパティ適用は後回し
-                createdObjects.push({ gameObject, layout });
+        try {
+            // --- ログ爆弾フェーズ2: オブジェクト生成ループの監視 ---
+            console.log("💣💥 FINAL BOMB - PHASE 2: Starting object creation loop...");
+            for (let i = 0; i < layoutData.objects.length; i++) {
+                const layout = layoutData.objects[i];
+                console.log(`💣 Processing object [${i+1}/${layoutData.objects.length}]: name='${layout.name}', type='${layout.type || 'Image'}'`);
+                
+                const gameObject = this.createObjectFromLayout(layout);
+                
+                if (gameObject) {
+                    console.log(`  -> SUCCESS: GameObject created.`);
+                    createdObjects.push({ gameObject, layout });
+                } else {
+                    console.warn(`  -> WARN: createObjectFromLayout returned null or undefined for '${layout.name}'.`);
+                }
             }
+            console.log("💣💥 FINAL BOMB - PHASE 2: Object creation loop FINISHED.");
+
+            // --- ログ爆弾フェーズ3: プロパティ適用ループの監視 ---
+            console.log("💣💥 FINAL BOMB - PHASE 3: Starting property application loop...");
+            for (let i = 0; i < createdObjects.length; i++) {
+                const item = createdObjects[i];
+                console.log(`💣 Applying properties to [${i+1}/${createdObjects.length}]: '${item.layout.name}'`);
+                this.applyProperties(item.gameObject, item.layout);
+            }
+            console.log("💣💥 FINAL BOMB - PHASE 3: Property application loop FINISHED.");
+            
+        } catch (error) {
+            // --- ログ爆弾フェーズ ERROR: 予期せぬエラーの捕捉 ---
+            console.error("💣💥 FATAL ERROR during buildSceneFromLayout loop!", error);
+            // エラーが発生しても、フリーズさせないためにfinalizeSetupを呼ぶ（デバッグ目的）
+            this.finalizeSetup();
+            return;
         }
-        
-        // 2. 全てのオブジェクトが生成され、親子関係が確定した後で、プロパティを「適用」する
-        for (const item of createdObjects) {
-            this.applyProperties(item.gameObject, item.layout);
-        }
-        
+
+        // --- ログ爆弾フェーズ4: finalizeSetupの呼び出し ---
+        console.log("💣💥 FINAL BOMB - PHASE 4: Calling finalizeSetup...");
         this.finalizeSetup();
     }
 
