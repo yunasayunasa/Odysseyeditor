@@ -105,30 +105,30 @@ export default class EditorPlugin extends Phaser.Plugins.BasePlugin {
     /**
      * ★★★ 新規メソッド: Transformタブの中身を生成する ★★★
      */
-    
-        populateTransformTab() {
-        // ★★★ 変更点1: プロパティパネルの中身を一度クリア ★★★
+    // src/plugins/EditorPlugin.js
+
+    // ... (他のメソッドは変更なし)
+
+    /**
+     * Transformタブの中身を生成する（完全版）
+     */
+    populateTransformTab() {
+        // プロパティパネルの中身を一度クリア
         this.editorPropsContainer.innerHTML = '';
         if (!this.selectedObject) return;
 
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-        // ★★★ ここからが、リネーム機能の追加部分です ★★★
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-
-        // --- Nameプロパティの編集UI ---
+        // --- Nameプロパティの編集UI (これは既に実装済みですね) ---
         const nameRow = document.createElement('div');
         const nameLabel = document.createElement('label');
         nameLabel.innerText = 'Name:';
         const nameInput = document.createElement('input');
         nameInput.type = 'text';
-        nameInput.value = this.selectedObject.name || ''; // 現在の名前を表示
+        nameInput.value = this.selectedObject.name || '';
         
-        // 入力が変更されたら、オブジェクトのnameプロパティをリアルタイムに更新
         nameInput.addEventListener('input', (e) => {
             const newName = e.target.value;
             if (this.selectedObject) {
                 this.selectedObject.name = newName;
-                // ★重要★ パネルのタイトルもリアルタイムで更新
                 this.editorTitle.innerText = `Editing: ${newName}`;
             }
         });
@@ -137,12 +137,14 @@ export default class EditorPlugin extends Phaser.Plugins.BasePlugin {
         nameRow.appendChild(nameInput);
         this.editorPropsContainer.appendChild(nameRow);
 
-        // --- 区切り線 ---
         const separator = document.createElement('hr');
         this.editorPropsContainer.appendChild(separator);
 
 
-        // --- 既存のTransformプロパティ (x, y, scaleなど) の生成 ---
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        // ★★★ ここからが、復活させる「見た目のプロパ-ティ」の生成ループです ★★★
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+
         const properties = {
             x: { type: 'number', step: 1 },
             y: { type: 'number', step: 1 },
@@ -151,13 +153,62 @@ export default class EditorPlugin extends Phaser.Plugins.BasePlugin {
             angle: { type: 'range', min: -180, max: 180, step: 1 },
             alpha: { type: 'range', min: 0, max: 1, step: 0.01 }
         };
-           for (const key in properties) {
-            // ... (これまでのプロパティHTML要素の生成ロジックは変更なし)
+
+        for (const key in properties) {
+            // 選択中のオブジェクトがそのプロパティを持っているか確認
+            if (this.selectedObject[key] === undefined) continue;
+
+            const prop = properties[key];
+            const value = this.selectedObject[key];
+            
+            const row = document.createElement('div');
+            const label = document.createElement('label');
+            label.innerText = `${key}:`;
+
+            const input = document.createElement('input');
+            input.type = prop.type;
+            if (prop.min !== undefined) input.min = prop.min;
+            if (prop.max !== undefined) input.max = prop.max;
+            if (prop.step !== undefined) input.step = prop.step;
+            input.value = value;
+
+            // 入力が変更されたら、オブジェクトのプロパティをリアルタイムに更新
+            input.addEventListener('input', (e) => {
+                const newValue = parseFloat(e.target.value);
+                if (!isNaN(newValue) && this.selectedObject) {
+                    // scaleXとscaleYを連動させるための特別な処理
+                    if (key === 'scaleX' && e.shiftKey) { // Shiftキーを押しながら操作
+                        this.selectedObject.setScale(newValue, newValue);
+                        // Yのスライダー表示も更新
+                        const scaleYInput = this.editorPropsContainer.querySelector('input[data-key="scaleY"]');
+                        if (scaleYInput) scaleYInput.value = newValue;
+                    } else if (key === 'scaleY' && e.shiftKey) {
+                         this.selectedObject.setScale(newValue, newValue);
+                         const scaleXInput = this.editorPropsContainer.querySelector('input[data-key="scaleX"]');
+                         if (scaleXInput) scaleXInput.value = newValue;
+                    } else {
+                        this.selectedObject[key] = newValue;
+                    }
+                }
+            });
+            // 後から参照できるようにキーをデータ属性として設定
+            input.dataset.key = key;
+
+            row.appendChild(label);
+            row.appendChild(input);
+            this.editorPropsContainer.appendChild(row);
         }
 
         // --- エクスポートボタン (変更なし) ---
-        // ...
-    
+        const exportSeparator = document.createElement('hr');
+        this.editorPropsContainer.appendChild(exportSeparator);
+        
+        const exportButton = document.createElement('button');
+        exportButton.innerText = 'Export Layout (to Console)';
+        exportButton.addEventListener('click', () => {
+            this.exportLayoutToJson();
+        });
+        this.editorPropsContainer.appendChild(exportButton);
     }
 
 
