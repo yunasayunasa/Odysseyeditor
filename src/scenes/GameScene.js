@@ -29,13 +29,16 @@ export default class GameScene extends Phaser.Scene { // ★ Phaser.Scene を直
         this.returnParams = data.returnParams || null;
     }
 
-    create() {
+  create() {
         console.log("[GameScene] Create started.");
         
-        this.layer.background = this.add.container(0, 0).setDepth(0);
-        this.layer.character = this.add.container(0, 0).setDepth(10);
-        this.layer.cg = this.add.container(0, 0).setDepth(5);
-        this.layer.message = this.add.container(0, 0).setDepth(20);
+        // --- 1. シーン固有のオブジェクトとマネージャーを全て生成 ---
+        this.layer = {
+            background: this.add.container(0, 0).setDepth(0),
+            character: this.add.container(0, 0).setDepth(10),
+            cg: this.add.container(0, 0).setDepth(5),
+            message: this.add.container(0, 0).setDepth(20)
+        };
 
         const soundManager = this.registry.get('soundManager');
         const configManager = this.registry.get('configManager');
@@ -54,37 +57,40 @@ export default class GameScene extends Phaser.Scene { // ★ Phaser.Scene を直
         }
         console.log(`[GameScene] ${Object.keys(tagHandlers).length} tag handlers registered.`);
 
-       // --- 2. このシーン専用のレイアウト処理 ---
+        // --- 2. このシーン専用のレイアウト処理 ---
         const sceneKey = this.scene.key;
-        const layoutData = this.cache.json.get(sceneKey); // PreloadSceneでロード済み
+        const layoutData = this.cache.json.get(sceneKey);
 
         if (layoutData && layoutData.objects) {
             console.log(`[${sceneKey}] Building scene from layout data...`);
             for (const layout of layoutData.objects) {
-                // オブジェクトを生成し、正しいレイヤーに追加する
+                // 2-1. オブジェクトを生成
                 const textureKey = layout.texture || layout.name.split('_')[0];
                 const gameObject = this.add.image(layout.x, layout.y, textureKey);
                 
+                // 2-2. 正しいレイヤーに追加
                 if (layout.name.startsWith('bg_')) {
                     this.layer.background.add(gameObject);
                 } else {
                     this.layer.character.add(gameObject);
                 }
 
-                // プロパティを適用
-                this.applyProperties(gameObject, layout);
+                // 2-3. プロパティを適用
+                this.applyProperties(gameObject, layout); // ★ applyPropertiesはGameScene自身のメソッドとして持つ
             }
         } else {
             console.warn(`[${sceneKey}] No layout data found.`);
         }
 
         // --- 3. シーンの全てのオブジェクトを編集可能にする ---
+        // (レイヤーの中身も含めて、全てを登録する)
         const editor = this.plugins.get('EditorPlugin');
         if (editor) {
-            this.children.list.forEach(child => {
-                if (child.list) { child.list.forEach(c => editor.makeEditable(c, this)); }
-                editor.makeEditable(child, this);
-            });
+            for (const layerName in this.layer) {
+                this.layer[layerName].list.forEach(child => {
+                    editor.makeEditable(child, this);
+                });
+            }
         }
         
         // --- 4. シナリオを開始し、準備完了を通知する ---
@@ -94,12 +100,10 @@ export default class GameScene extends Phaser.Scene { // ★ Phaser.Scene を直
         
         this.scenarioManager.loadScenario(this.startScenario, this.startLabel);
         
-        // ★★★ SystemSceneに頼らず、自分自身でシナリオを開始する ★★★
         this.time.delayedCall(10, () => {
             if (this.scenarioManager) this.scenarioManager.next();
         });
 
-        // ★★★ 最後に、SystemSceneに準備完了を伝える ★★★
         this.events.emit('scene-ready');
         console.log(`[GameScene] Setup complete. Scene is ready.`);
     }
@@ -114,6 +118,40 @@ export default class GameScene extends Phaser.Scene { // ★ Phaser.Scene を直
         
         this.scenarioManager.loadScenario(this.startScenario, this.startLabel);
        this.time.delayedCall(10, () => this.scenarioManager.next());
+    }
+  /**
+     * ★★★ 新規メソッド (旧applyPhysicsProperties) ★★★
+     * 単体のオブジェクトに、JSONから読み込んだプロパティを「適用」する
+     */
+    applyProperties(gameObject, layout) {
+        gameObject.name = layout.name;
+        
+        // Transformプロパティを適用
+        gameObject.setPosition(layout.x, layout.y);
+        gameObject.setScale(layout.scaleX, layout.scaleY);
+        gameObject.setAngle(layout.angle);
+        gameObject.setAlpha(layout.alpha);
+if (layout.visible !== undefined) {
+            gameObject.setVisible(layout.visible);
+        }
+        // 物理プロパティを適用
+        if (layout.physics) {
+            const phys = layout.physics;
+            this.physics.add.existing(gameObject, phys.isStatic);
+            if (gameObject.body) {
+                gameObject.body.setSize(phys.width, phys.height);
+                gameObject.body.setOffset(phys.offsetX, phys.offsetY);
+                gameObject.body.allowGravity = phys.allowGravity;
+                gameObject.body.bounce.setTo(phys.bounceX, phys.bounceY);
+                gameObject.body.collideWorldBounds = phys.collideWorldBounds;
+            }
+        }
+
+        // エディタに登録
+        const editor = this.plugins.get('EditorPlugin');
+        if (editor) {
+            editor.makeEditable(gameObject, this);
+        }
     }
 
 
