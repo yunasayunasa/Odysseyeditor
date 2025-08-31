@@ -246,8 +246,15 @@ export default class EditorPlugin extends Phaser.Plugins.BasePlugin {
         button.onclick = () => {
             if (this.selectedObject) {
                 // オブジェクトに物理ボディを追加する
-                this.pluginManager.game.scene.getScene('GameScene').physics.add.existing(this.selectedObject, false); // false = 静的ボディ
+                    // 1. 物理ボディを追加する
+                //    第2引数を 'true' にすることで、「静的(static)ボディ」として生成する
+                this.pluginManager.game.scene.getScene('GameScene').physics.add.existing(this.selectedObject, true);
                 
+                // 2. 静的ボディは重力の影響をデフォルトで受けないが、念のため明示的にOFFにする
+                if (this.selectedObject.body) {
+                    this.selectedObject.body.setAllowGravity(false);
+                }
+
                 // 表示を即座に更新する
                 this.updatePropertyPanel();
             }
