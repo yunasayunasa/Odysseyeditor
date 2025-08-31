@@ -113,7 +113,7 @@ export default class GameScene extends Phaser.Scene { // ★ Phaser.Scene を直
         });
         
         this.scenarioManager.loadScenario(this.startScenario, this.startLabel);
-     //   this.time.delayedCall(10, () => this.scenarioManager.next());
+       this.time.delayedCall(10, () => this.scenarioManager.next());
     }
 
 
