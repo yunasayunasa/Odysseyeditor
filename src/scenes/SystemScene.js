@@ -1,4 +1,5 @@
 import SoundManager from '../core/SoundManager.js';
+import EditorUI from '../editor/EditorUI.js'; // ★ インポート
 
 export default class SystemScene extends Phaser.Scene {
     constructor() {
@@ -37,9 +38,12 @@ export default class SystemScene extends Phaser.Scene {
         }
 
     if (stateManager.sf.debug_mode) {
-        // ★★★ グローバルプラグインを取得して起動 ★★★
-        this.plugins.start('EditorPlugin');
-    }}
+        const editorPlugin = this.plugins.start('EditorPlugin'); // プラグインを起動
+        
+        // ★★★ EditorUIをnewし、gameインスタンスとpluginインスタンスを渡す ★★★
+        new EditorUI(this.game, editorPlugin);
+    }
+}
 
     /**
      * 初期ゲームを起動する内部メソッド
