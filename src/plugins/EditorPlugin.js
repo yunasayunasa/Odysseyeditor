@@ -1,29 +1,78 @@
-// src/plugins/EditorPlugin.js
 
 export default class EditorPlugin extends Phaser.Plugins.BasePlugin {
-      constructor(pluginManager) {
+    constructor(pluginManager) {
         super(pluginManager);
 
         this.selectedObject = null;
         this.isDragging = false;
-
-        // ★★★ 変更点1: 編集可能オブジェクトを管理するMapを追加 ★★★
-        // Key: シーンキー (e.g., 'UIScene'), Value: そのシーンの編集可能オブジェクトのSet
         this.editableObjects = new Map();
 
+        // --- 既存のプロパティパネルの要素取得 ---
         this.editorPanel = document.getElementById('editor-panel');
         this.editorTitle = document.getElementById('editor-title');
         this.editorPropsContainer = document.getElementById('editor-props');
+        
+        // ★★★ 変更点1: アセット・ブラウザのHTML要素もここで取得しておく ★★★
+        this.assetBrowserPanel = document.getElementById('asset-browser');
+        this.assetListContainer = document.getElementById('asset-list');
     }
 
-     init() {
+    init() {
         console.log('[EditorPlugin] Initialized.');
+        
+        // プロパティパネルを表示
         if (this.editorPanel) {
             this.editorPanel.style.display = 'block';
         }
         
-        // ★★★ 不安定なキーボードリスナーの登録処理を完全に削除 ★★★
+        // ★★★ 変更点2: アセット・ブラウザを表示し、中身を構築する ★★★
+        if (this.assetBrowserPanel && this.assetListContainer) {
+            this.assetBrowserPanel.style.display = 'block'; // 非表示だったパネルを表示する
+            
+            // --- レジストリからアセットリストを取得 ---
+            const assetList = this.pluginManager.game.registry.get('asset_list');
+            if (!assetList) {
+                console.warn('[EditorPlugin] Asset list not found in registry.');
+                return;
+            }
+
+            // --- アセットリストに基づいてHTML要素を生成 ---
+            // まずは中身を空にする
+            this.assetListContainer.innerHTML = '';
+            
+            // 画像アセットのみをフィルタリング
+            const imageAssets = assetList.filter(asset => asset.type === 'image');
+
+            for (const asset of imageAssets) {
+                // 1. 各アセットアイテムの外側のコンテナ(div)を作る
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'asset-item';
+                // HTMLのデータ属性として、アセットキーとパスを埋め込んでおく
+                itemDiv.dataset.assetKey = asset.key;
+                itemDiv.dataset.assetPath = asset.path;
+                
+                // 2. プレビュー画像(img)を作る
+                const previewImg = document.createElement('img');
+                previewImg.className = 'asset-preview';
+                previewImg.src = asset.path; // 画像のパスをsrcに設定
+                
+                // 3. アセットキー(span)を作る
+                const keySpan = document.createElement('span');
+                keySpan.className = 'asset-key';
+                keySpan.innerText = asset.key;
+                
+                // 4. コンテナに画像とキーを追加
+                itemDiv.appendChild(previewImg);
+                itemDiv.appendChild(keySpan);
+                
+                // 5. 最終的に、リスト全体にこのアイテムを追加
+                this.assetListContainer.appendChild(itemDiv);
+            }
+            
+            console.log(`[EditorPlugin] Asset Browser populated with ${imageAssets.length} image assets.`);
+        }
     }
+ 
     
 
      /**
