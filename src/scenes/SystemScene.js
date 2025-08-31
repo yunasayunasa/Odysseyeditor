@@ -35,9 +35,11 @@ export default class SystemScene extends Phaser.Scene {
         if (this.initialGameData) {
             this._startInitialGame(this.initialGameData);
         }
- if (stateManager.sf.debug_mode) {
-        this.scene.launch('EditorScene');
-    }     }
+ const stateManager = this.registry.get('stateManager');
+    if (stateManager.sf.debug_mode) {
+        // ★★★ グローバルプラグインを取得して起動 ★★★
+        this.plugins.start('EditorPlugin');
+    }}
 
     /**
      * 初期ゲームを起動する内部メソッド

@@ -101,28 +101,33 @@ export default class UIScene extends Phaser.Scene {
         systemScene.events.on('transition-complete', this.onSceneTransition, this);
         
        
-    if (stateManager.sf.debug_mode) {
-        // ★★★ オブジェクトに当たり判定とインタラクティブ設定を追加 ★★★
-        this.panel.setSize(1280, 120).setInteractive();
-        this.coinHud.setSize(150, 50).setInteractive();
-        this.playerHpBar.setSize(200, 25).setInteractive();
-        this.enemyHpBar.setSize(250, 25).setInteractive();
+      if (stateManager.sf.debug_mode) {
+        // ★★★ プラグインを取得 ★★★
+        const editor = this.plugins.get('EditorPlugin');
         
-        // テキストや画像は setInteractive() だけでOK
-        this.menuButton.setInteractive();
-
-        // ★★★ ドラッグ可能にする設定は、対象のシーン自身が行う ★★★
-        this.input.setDraggable([this.panel, this.coinHud, this.playerHpBar, this.enemyHpBar, this.menuButton]);
+        // ★★★ コンテナにサイズを設定 ★★★
+        this.panel.setSize(1280, 120);
+        this.coinHud.setSize(150, 50);
+        this.playerHpBar.setSize(200, 25);
+        this.enemyHpBar.setSize(250, 25);
         
-        // ホバーエフェクト
-        this.children.list.forEach(go => {
-            if (go.input) {
-                go.on('pointerover', () => go.setTint(0x00ff00));
-                go.on('pointerout', () => go.clearTint());
-            }
-        });
+        // ★★★ プラグインにオブジェクトを渡す ★★★
+        editor.makeEditable(this.panel);
+        editor.makeEditable(this.coinHud);
+        editor.makeEditable(this.playerHpBar);
+        editor.makeEditable(this.enemyHpBar);
+        editor.makeEditable(this.menuButton);
     }
+    
+    // ★★★ 背景クリックで選択解除 ★★★
+    this.input.on('pointerdown', (pointer) => {
+        if (pointer.getObjectsUnderPointer().length === 0) {
+            const editor = this.plugins.get('EditorPlugin');
+            if (editor) editor.onScenePointerDown();
+        }
+    });
 }
+      
 
     // --- 以下、このクラスが持つメソッド群 ---
    onSceneTransition(newSceneKey) {
