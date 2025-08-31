@@ -1,41 +1,32 @@
 
-import BaseGameScene from './BaseGameScene.js';
-import ScenarioManager from '../core/ScenarioManager.js';
-import MessageWindow from '../ui/MessageWindow.js';
-import { tagHandlers } from '../handlers/index.js';
-
 export default class GameScene extends BaseGameScene {
     constructor() {
         super({ key: 'GameScene' });
         
-        // --- GameScene固有のプロパティ ---
         this.scenarioManager = null;
         this.messageWindow = null;
         this.layer = { background: null, character: null, cg: null, message: null };
-        this.characters = {}; // [chara_show]などで生成されたオブジェクトを管理
-        this.pendingChoices = []; // [link]タグで生成された選択肢
+        this.characters = {};
+        this.pendingChoices = [];
     }
 
     init(data) {
-        // --- SystemSceneから渡されるデータをプロパティに保存 ---
-        this.charaDefs = data.charaDefs;
-        this.startScenario = data.startScenario || 'test.ks';
+        this.charaDefs = data.initialGameData.charaDefs; // SystemSceneからのデータ構造に合わせる
+        this.startScenario = data.initialGameData.startScenario || 'test.ks';
+        // ... (他のinit処理)
         this.startLabel = data.startLabel || null;
         this.isResuming = data.resumedFrom ? true : false;
         this.returnParams = data.returnParams || null;
     }
 
-    create() {
+   create() {
         console.log("[GameScene] Create started.");
         
-           // --- シーン固有のオブジェクトを「器」として先に生成 ---
-        this.cameras.main.setBackgroundColor('#000000');
-        this.layer = {
-            background: this.add.container(0, 0).setDepth(0),
-            character: this.add.container(0, 0).setDepth(10),
-            cg: this.add.container(0, 0).setDepth(5),
-            message: this.add.container(0, 0).setDepth(20)
-        };
+        this.layer.background = this.add.container(0, 0).setDepth(0);
+        this.layer.character = this.add.container(0, 0).setDepth(10);
+        this.layer.cg = this.add.container(0, 0).setDepth(5);
+        this.layer.message = this.add.container(0, 0).setDepth(20);
+
         const soundManager = this.registry.get('soundManager');
         const configManager = this.registry.get('configManager');
         const stateManager = this.registry.get('stateManager');
@@ -45,26 +36,48 @@ export default class GameScene extends BaseGameScene {
         
         this.scenarioManager = new ScenarioManager(this, this.layer, this.charaDefs, this.messageWindow, soundManager, stateManager, configManager);
         
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        // ★★★ 復活させるタグハンドラの登録処理 ★★★
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
         for (const tagName in tagHandlers) {
             this.scenarioManager.registerTag(tagName, tagHandlers[tagName]);
         }
+        console.log(`[GameScene] ${Object.keys(tagHandlers).length} tag handlers registered.`);
 
-        // --- 2. 親の汎用ルーチンを呼び出して、レイアウトを適用 ---
-        // (GameScene.json に定義されたオブジェクトがここで生成・配置される)
         this.applyLayoutAndPhysics();
     }
-  /**
+   /**
      * BaseGameSceneのfinalizeSetupから呼び出される、このシーン専用の最終処理
      */
     onSetupComplete() {
-        // --- クリックイベントをシナリオマネージャーに接続 ---
         this.input.on('pointerdown', () => {
             if (this.scenarioManager) this.scenarioManager.onClick();
         });
         
-        // --- シナリオの実行を開始 ---
         this.scenarioManager.loadScenario(this.startScenario, this.startLabel);
         this.time.delayedCall(10, () => this.scenarioManager.next());
+
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        // ★★★ これがないとSystemSceneが永久に待機します ★★★
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        super.finalizeSetup(); // 親のfinalizeSetupを呼び出して 'scene-ready' を発行
+    }
+
+    /**
+     * GameScene専用のオブジェクト生成ロジック
+     */
+    createObjectFromLayout(layout) {
+        const gameObject = super.createObjectFromLayout(layout);
+
+        if (gameObject) {
+            // 名前の先頭が'bg_'なら背景レイヤー、それ以外ならキャラクターレイヤーに振り分け
+            if (layout.name.startsWith('bg_')) {
+                this.layer.background.add(gameObject);
+            } else {
+                this.layer.character.add(gameObject);
+            }
+        }
+        return gameObject;
     }
   
         
