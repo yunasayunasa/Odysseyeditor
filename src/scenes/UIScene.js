@@ -51,7 +51,16 @@ export default class UIScene extends Phaser.Scene {
             uiElement.name = elementDef.name;
             this[elementDef.name] = uiElement;
         }
+     if (this.bottom_panel) {
+            // ★★★ 修正点1: パネルのDepthを設定 ★★★
+            // 他のUIよりは手前だが、メニューボタンよりは奥に描画する
+            this.bottom_panel.setDepth(1); 
+        }
 
+        if (this.menu_button) {
+            // ★★★ 修正点2: メニューボタンを最前面に設定 ★★★
+            this.menu_button.setDepth(2);
+        }
         // ★★★ 変更点2: 全てのUI要素が生成された後で、イベントリスナーを一括設定 ★★★
         this.assignEventListeners();
 
@@ -159,19 +168,16 @@ export default class UIScene extends Phaser.Scene {
         return panel;
     }
     
-       /**
-     * UI要素のイベントリスナーをまとめて設定するヘルパーメソッド
+   // src/scenes/UIScene.js
+
+    /**
+     * UI要素のイベントリスナーをまとめて設定するヘルパーメソッド（完全版）
      */
     assignEventListeners() {
         // --- メインのMENUボタン ---
         if (this.menu_button) {
-            // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-            // ★★★ ここが修正箇所です (1/6) ★★★
-            // ★★★ コールバック関数に第2引数 'event' を追加します ★★★
-            // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
             this.menu_button.setInteractive().on('pointerdown', (pointer, localX, localY, event) => {
                 this.togglePanel();
-                // ★★★ 'pointer' ではなく 'event' を使います ★★★
                 event.stopPropagation();
             });
         }
@@ -179,68 +185,96 @@ export default class UIScene extends Phaser.Scene {
         if (this.bottom_panel) {
             const panelBg = this.bottom_panel.list[0];
             if (panelBg) {
-                // ★★★ 修正箇所 (2/6) ★★★
                 panelBg.setInteractive().on('pointerdown', (pointer, localX, localY, event) => {
                     event.stopPropagation();
                 });
             }
 
+            // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+            // ★★★ ここからが、ボタンの機能を復活させる修正です ★★★
+            // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+
             const saveButton = this.bottom_panel.list.find(obj => obj.name === 'save_button');
             if(saveButton) {
-                // ★★★ 修正箇所 (3/6) ★★★
                 saveButton.setInteractive().on('pointerdown', (pointer, localX, localY, event) => {
-                    console.log('Save button clicked');
+                    this.openScene('SaveLoadScene', { mode: 'save' });
                     event.stopPropagation();
                 });
             }
 
             const loadButton = this.bottom_panel.list.find(obj => obj.name === 'load_button');
             if(loadButton) {
-                // ★★★ 修正箇所 (4/6) ★★★
                 loadButton.setInteractive().on('pointerdown', (pointer, localX, localY, event) => {
-                    console.log('Load button clicked');
+                    this.openScene('SaveLoadScene', { mode: 'load' });
                     event.stopPropagation();
                 });
             }
 
             const backlogButton = this.bottom_panel.list.find(obj => obj.name === 'backlog_button');
             if(backlogButton) {
-                // ★★★ 修正箇所 (5/6) ★★★
                 backlogButton.setInteractive().on('pointerdown', (pointer, localX, localY, event) => {
-                    console.log('Backlog button clicked');
+                    this.openScene('BacklogScene');
                     event.stopPropagation();
                 });
             }
 
             const configButton = this.bottom_panel.list.find(obj => obj.name === 'config_button');
             if(configButton) {
-                // ★★★ 修正箇所 (6/6) ★★★
                 configButton.setInteractive().on('pointerdown', (pointer, localX, localY, event) => {
-                    console.log('Config button clicked');
+                    this.openScene('ConfigScene');
                     event.stopPropagation();
                 });
             }
-            // assignEventListeners() の 'configButton' の処理の後に追加
 
-            // 'auto_button' という名前を持つオブジェクトを探して、イベントを設定
             const autoButton = this.bottom_panel.list.find(obj => obj.name === 'auto_button');
             if(autoButton) {
                 autoButton.setInteractive().on('pointerdown', (pointer, localX, localY, event) => {
-                    console.log('Auto button clicked');
-                    // ここにオートモード切り替え処理を実装
+                    this.toggleGameMode('auto');
                     event.stopPropagation();
                 });
             }
 
-            // 'skip_button' という名前を持つオブジェクトを探して、イベントを設定
             const skipButton = this.bottom_panel.list.find(obj => obj.name === 'skip_button');
             if(skipButton) {
                 skipButton.setInteractive().on('pointerdown', (pointer, localX, localY, event) => {
-                    console.log('Skip button clicked');
-                    // ここにスキップモード切り替え処理を実装
+                    this.toggleGameMode('skip');
                     event.stopPropagation();
                 });
             }
+        }
+    }
+
+    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    // ★★★ 以下の2つのメソッドがUISceneに必要です ★★★
+    // ★★★ (もし消えていたら、追加してください) ★★★
+    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+
+    /**
+     * セーブ画面や設定画面などの別シーンをモーダル表示する
+     * @param {string} sceneKey - 起動するシーンのキー
+     * @param {object} data - シーンに渡すデータ
+     */
+    openScene(sceneKey, data = {}) {
+        // GameSceneが動いているなら、それを一時停止する
+        if (this.scene.isActive('GameScene')) {
+            this.scene.pause('GameScene');
+        }
+        // 新しいシーンを起動する
+        this.scene.launch(sceneKey, data);
+    }
+    
+    /**
+     * オートモードやスキップモードを切り替える
+     * @param {string} mode - 'auto' または 'skip'
+     */
+    toggleGameMode(mode) {
+        const gameScene = this.scene.get('GameScene');
+        if (gameScene && gameScene.scenarioManager) {
+            const currentMode = gameScene.scenarioManager.mode;
+            // 同じモードが再度クリックされたら'normal'に戻し、違うモードなら新しいモードに設定
+            const newMode = currentMode === mode ? 'normal' : mode;
+            gameScene.scenarioManager.setMode(newMode);
+            console.log(`Game mode set to: ${newMode}`);
         }
     }
     
