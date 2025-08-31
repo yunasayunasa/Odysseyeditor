@@ -21,22 +21,32 @@ export default class BaseGameScene extends Phaser.Scene {
     /**
      * 読み込み済みのレイアウトデータを使って、シーンを構築する
      */
-     buildSceneFromLayout(layoutData) { // ★ 引数が sceneKey から layoutData に変更
+      buildSceneFromLayout(layoutData) {
         const sceneKey = this.scene.key;
         if (!layoutData || !layoutData.objects) {
-            console.warn(`[${sceneKey}] No layout data found for this scene. Finalizing setup.`);
-            
+            this.finalizeSetup();
             return;
         }
 
-
         console.log(`[${sceneKey}] Building scene from layout data...`);
         
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        // ★★★ これが最後のアーキテクチャ修正です ★★★
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+
+        // 1. まず、JSONに基づいて全てのオブジェクトを「生成」だけして、配列に溜め込む
+        const createdObjects = [];
         for (const layout of layoutData.objects) {
             const gameObject = this.createObjectFromLayout(layout);
             if (gameObject) {
-                this.applyProperties(gameObject, layout);
+                // 親子関係が壊れないように、プロパティ適用は後回し
+                createdObjects.push({ gameObject, layout });
             }
+        }
+        
+        // 2. 全てのオブジェクトが生成され、親子関係が確定した後で、プロパティを「適用」する
+        for (const item of createdObjects) {
+            this.applyProperties(item.gameObject, item.layout);
         }
         
         this.finalizeSetup();
