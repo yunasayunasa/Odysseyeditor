@@ -1,132 +1,86 @@
+
+import BaseGameScene from './BaseGameScene.js';
 import ScenarioManager from '../core/ScenarioManager.js';
-import SoundManager from '../core/SoundManager.js';
-import StateManager from '../core/StateManager.js';
 import MessageWindow from '../ui/MessageWindow.js';
-import ConfigManager from '../core/ConfigManager.js';
 import { tagHandlers } from '../handlers/index.js';
 
-
-export default class GameScene extends Phaser.Scene {
+export default class GameScene extends BaseGameScene {
     constructor() {
-        super({key:'GameScene', active :false});
-        // プロパティの初期化
+        super({ key: 'GameScene' });
+        
+        // --- GameScene固有のプロパティ ---
         this.scenarioManager = null;
-        this.soundManager = null;
-        this.stateManager = null;
         this.messageWindow = null;
         this.layer = { background: null, character: null, cg: null, message: null };
-        this.charaDefs = null;
-        this.characters = {};
-        this.configManager = null;
-        this.choiceButtons = [];
-        this.pendingChoices = [];
-        this.uiButtons = [];
-    
-        this.restoredBgmKey = null;
-        
-          this.isPerformingLoad = false; // ★★★ 追加: ロード処理中フラグ ★★★
-        this.isSceneFullyReady = false; // シーンが完全に準備完了したかのフラグ
+        this.characters = {}; // [chara_show]などで生成されたオブジェクトを管理
+        this.pendingChoices = []; // [link]タグで生成された選択肢
     }
 
     init(data) {
+        // --- SystemSceneから渡されるデータをプロパティに保存 ---
         this.charaDefs = data.charaDefs;
         this.startScenario = data.startScenario || 'test.ks';
         this.startLabel = data.startLabel || null;
-  this.isPerformingLoad = false; // ★★★ init時にリセット ★★★
         this.isResuming = data.resumedFrom ? true : false;
         this.returnParams = data.returnParams || null;
-               // ★★★ 修正箇所 ★★★
-        // SystemSceneから渡されたBGMキーを受け取り、プロパティに保存する
-        this.restoredBgmKey = data.restoredBgmKey || null;
-        if (this.restoredBgmKey) {
-            console.log(`[GameScene.init] 復帰BGMキーを受け取りました: ${this.restoredBgmKey}`);
-        this.isSceneFullyReady = false; // init時にリセット
-    }
     }
 
-    preload() {
-        this.load.text('test.ks', 'assets/test.ks'); 
-        this.load.text('scene2.ks', 'assets/scene2.ks'); 
-        this.load.text('overlay_test.ks', 'assets/overlay_test.ks');
-    }
-
-   // src/scenes/GameScene.js の create() メソッドの正しい形
-
-        async create() { 
-            
-            console.log("GameScene: クリエイト処理を開始します。");
-        this.cameras.main.setBackgroundColor('#000000');
+    create() {
+        console.log("[GameScene] Create started.");
         
-        // --- レイヤー生成とdepth設定 ---
+        // --- 1. シーン固有のオブジェクトを生成 ---
+        this.cameras.main.setBackgroundColor('#000000');
         this.layer.background = this.add.container(0, 0).setDepth(0);
-        this.layer.cg = this.add.container(0, 0).setDepth(5);
         this.layer.character = this.add.container(0, 0).setDepth(10);
+        this.layer.cg = this.add.container(0, 0).setDepth(5);
         this.layer.message = this.add.container(0, 0).setDepth(20);
 
-        // --- 入力ブロッカー ---
-        this.choiceInputBlocker = this.add.rectangle(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, 0x000000, 0.001)
-            .setInteractive()
-            .setVisible(false)
-            .setDepth(0);
-        this.choiceInputBlocker.on('pointerdown', () => console.log("選択肢を選んでください"));
-        // this.choiceInputBlocker.input.enabled = false; // setVisible(false)で十分なので、この行は不要
-
-        // --- マネージャー/UIクラスの生成 ---
-        this.configManager = this.sys.registry.get('configManager');
-        this.stateManager = this.sys.registry.get('stateManager'); 
-     
+        const soundManager = this.registry.get('soundManager');
+        const configManager = this.registry.get('configManager');
+        const stateManager = this.registry.get('stateManager');
         
-           // ★★★ 修正箇所: SoundManagerをnewするのではなく、Registryから取得 ★★★
-        this.soundManager = this.sys.registry.get('soundManager');
-        this.messageWindow = new MessageWindow(this, this.soundManager, this.configManager);
+        this.messageWindow = new MessageWindow(this, soundManager, configManager);
         this.layer.message.add(this.messageWindow); 
-        this.scenarioManager = new ScenarioManager(this, this.layer, this.charaDefs, this.messageWindow, this.soundManager, this.stateManager, this.configManager);
-  // ★★★ 追加: 最初のクリックで一度だけAudioContextを有効化する ★★★
-     this.applyLayoutAndPhysics();
-
-
-        // ★★★ 追加: 最初のクリックで一度だけAudioContextを有効化する ★★★
-        this.input.once('pointerdown', () => {
-            if (this.soundManager) {
-                this.soundManager.resumeContext();
-            }
-        }, this);    // --- タグハンドラの登録 ---
-        console.log("タグハンドラの一括登録を開始します...");
+        
+        this.scenarioManager = new ScenarioManager(this, this.layer, this.charaDefs, this.messageWindow, soundManager, stateManager, configManager);
+        
         for (const tagName in tagHandlers) {
             this.scenarioManager.registerTag(tagName, tagHandlers[tagName]);
         }
-        console.log(`${Object.keys(tagHandlers).length}個のタグハンドラを登録しました。`);
-        
-     
-          // --- ゲーム開始ロジック ---
-    if (this.isResuming) {
-        console.log("GameScene: 復帰処理を開始します。");
-        console.log("[LOG-BOMB] GameScene.create: AWAITING performLoad..."); // ★
-        await this.performLoad(0, this.returnParams);
-        console.log("[LOG-BOMB] GameScene.create: ...performLoad COMPLETED."); // ★
-     } else {
-        console.log("GameScene: 通常起動します。");
-        this.performSave(0);
-        this.scenarioManager.loadScenario(this.startScenario, this.startLabel);
-        this.isSceneFullyReady = true;
 
-        // ★★★ 修正の核心 (通常起動時) ★★★
-        // イベントの発行を、ごくわずかに（1フレーム後）遅らせる
-        this.time.delayedCall(1, () => {
-            this.events.emit('gameScene-load-complete');
-            console.log("GameScene: 通常起動完了。ロード完了イベントを発行しました。(遅延発行)");
-        });
-        this.time.delayedCall(10, () => this.scenarioManager.next());
-
-
+        // --- 2. 親の汎用ルーチンを呼び出して、レイアウトを適用 ---
+        // (GameScene.json に定義されたオブジェクトがここで生成・配置される)
+        this.applyLayoutAndPhysics();
     }
-          this.input.on('pointerdown', () => {
-                if (this.scenarioManager) {
-                    this.scenarioManager.onClick();
-                }
-            });
-     
-        } // ← create メソッドの終わり
+
+    /**
+     * GameScene専用の最終セットアップ
+     * (BaseGameSceneのメソッドをオーバーライド)
+     */
+    finalizeSetup() {
+        // --- 衝突判定など、レイアウト適用後に行う処理 ---
+        // (必要であれば、ここに物理の衝突判定などを記述)
+
+        // --- クリックイベントをシナリオマネージャーに接続 ---
+        this.input.on('pointerdown', () => {
+            if (this.scenarioManager) {
+                this.scenarioManager.onClick();
+            }
+        });
+        
+        // --- シナリオの実行を開始 ---
+        if (this.isResuming) {
+            // (セーブ/ロード機能は、今後の実装でここに統合)
+            console.log("GameScene: Resuming is not fully implemented in BaseGameScene yet.");
+        } else {
+            this.scenarioManager.loadScenario(this.startScenario, this.startLabel);
+            this.time.delayedCall(10, () => this.scenarioManager.next());
+        }
+
+        // --- 最後に、必ず親の finalizeSetup を呼び出して 'scene-ready' を発行 ---
+        // これを呼ばないと、SystemSceneが待ち続けてゲームがフリーズする
+        super.finalizeSetup();
+    }
         
     // ★★★ 修正箇所: stop()メソッドを一つに統一し、全てのクリーンアップを行う ★★★
     shutdown() {
