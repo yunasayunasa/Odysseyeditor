@@ -2,36 +2,33 @@
 
 export default class BaseGameScene extends Phaser.Scene {
 
-    /**
-     * 汎用初期化ルーチン：シーンキーと同じ名前のJSONデータを読み込み、
-     * シーンのレイアウトと物理を構築する。
+     /**
+     * 汎用初期化ルーチン（async/await版）
      */
-    applyLayoutAndPhysics() {
+    async applyLayoutAndPhysics() {
         const sceneKey = this.scene.key;
         const layoutPath = `assets/data/scenes/${sceneKey}.json`;
 
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-        // ★★★ これが 'No layout data found' を解決するロジックです ★★★
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-        
-        // 1. まず、JSONが既にキャッシュに存在するかチェック
-        if (this.cache.json.has(sceneKey)) {
-            // 2. 存在すれば、次のフレームで構築処理を呼び出す
-            //    (シーンの初期化処理が完全に終わるのを待つための安全策)
-            this.time.delayedCall(1, () => {
-                this.buildSceneFromLayout(sceneKey);
+        // 1. JSONがキャッシュに存在するかチェック
+        if (!this.cache.json.has(sceneKey)) {
+            // 2. 存在しなければ、ロード処理が終わるのを「待つ(await)」
+            console.log(`[${sceneKey}] Loading layout file: ${layoutPath}`);
+            
+            // Promiseを使って、ロード完了を待機可能な非同期処理に変換
+            await new Promise(resolve => {
+                this.load.json(sceneKey, layoutPath);
+                this.load.once(`filecomplete-json-${sceneKey}`, resolve);
+                this.load.start();
             });
+            console.log(`[${sceneKey}] Layout file loaded.`);
         } else {
-            // 3. 存在しなければ、ファイルをロードする
-            this.load.json(sceneKey, layoutPath);
-            // 4. ロードが完了したら、構築処理を呼び出す
-            this.load.once(`filecomplete-json-${sceneKey}`, () => {
-                this.buildSceneFromLayout(sceneKey);
-            });
-            // 5. ロードを開始
-            this.load.start();
+            console.log(`[${sceneKey}] Layout data found in cache.`);
         }
+
+        // 3. 確実にデータが存在する状態で、構築処理を呼び出す
+        this.buildSceneFromLayout(sceneKey);
     }
+
 
     /**
      * 読み込み済みのレイアウトデータを使って、シーンを構築する

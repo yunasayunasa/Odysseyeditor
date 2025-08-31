@@ -28,7 +28,7 @@ export default class GameScene extends BaseGameScene {
         this.returnParams = data.returnParams || null;
     }
 
-   create() {
+     async create() { // ★ async を追加
         console.log("[GameScene] Create started.");
         
         this.layer.background = this.add.container(0, 0).setDepth(0);
@@ -53,7 +53,7 @@ export default class GameScene extends BaseGameScene {
         }
         console.log(`[GameScene] ${Object.keys(tagHandlers).length} tag handlers registered.`);
 
-        this.applyLayoutAndPhysics();
+       await this.applyLayoutAndPhysics();
     }
    /**
      * BaseGameSceneのfinalizeSetupから呼び出される、このシーン専用の最終処理
