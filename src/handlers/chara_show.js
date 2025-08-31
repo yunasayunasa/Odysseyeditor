@@ -1,12 +1,7 @@
+// src/handlers/chara_show.js (最終確定・完成版)
+
 import { Layout } from '../core/Layout.js';
 
-/**
- * [chara_show] タグの処理
- * キャラクターを画面に登場させる
- * @param {ScenarioManager} manager
- * @param {Object} params - { name, face, storage, pos, x, y, time }
- * @returns {Promise<void>}
- */
 export function handleCharaShow(manager, params) {
     return new Promise(resolve => {
         const name = params.name;
@@ -15,74 +10,84 @@ export function handleCharaShow(manager, params) {
             resolve();
             return;
         }
-
-        const def = manager.characterDefs[name];
-        if (!def) {
-            console.warn(`キャラクター[${name}]の定義が見つかりません。`);
-            resolve();
-            return;
-        }
-
+        
         // --- 1. 表示する画像(storage)を決定 ---
-        const face = params.face || 'normal';
-        const storage = def.face[face];
+        const def = manager.characterDefs[name];
+        let storage = params.storage;
+        if (!storage && def) {
+            const face = params.face || 'normal';
+            storage = def.face[face];
+        }
         if (!storage) {
-            console.warn(`キャラクター[${name}]の表情[${face}]のstorageが見つかりません。`);
+            console.warn(`[chara_show] 表示するstorageが見つかりません: name=${name}`);
             resolve();
             return;
         }
 
         // --- 2. 座標を決定 ---
         let x, y;
-        const pos = params.pos;
-        const orientation = manager.scene.scale.isPortrait ? 'portrait' : 'landscape';
-
-        if (pos && Layout[orientation].character[pos]) {
-            x = Layout[orientation].character[pos].x;
-            y = Layout[orientation].character[pos].y;
+        const sceneKey = manager.scene.scene.key; // 現在のシーンキーを取得 (e.g., 'GameScene')
+        
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        // ★★★ これが古いコードを置き換える、新しいロジックです ★★★
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        
+        // 2-1. まず、対応するシーンのJSONデータからレイアウトを探す
+        const layoutData = manager.scene.cache.json.get(sceneKey);
+        const layout = (layoutData && layoutData.objects) ? layoutData.objects.find(obj => obj.name === name) : null;
+        
+        if (layout) {
+            // 2-2. レイアウトデータがあれば、それを最優先で使う
+            x = layout.x;
+            y = layout.y;
         } else {
-            x = Layout[orientation].character.center.x;
-            y = Layout[orientation].character.center.y;
+            // 2-3. なければ、タグの指定やデフォルト値を使う
+            const pos = params.pos;
+            const orientation = manager.scene.scale.isPortrait ? 'portrait' : 'landscape';
+            if (pos && Layout[orientation].character[pos]) {
+                x = Layout[orientation].character[pos].x;
+                y = Layout[orientation].character[pos].y;
+            } else {
+                x = Layout[orientation].character.center.x;
+                y = Layout[orientation].character.center.y;
+            }
         }
-
+        
+        // 2-4. タグに直接 x, y 指定があれば、さらにそれを上書きする（演出用）
         if (params.x !== undefined) x = Number(params.x);
         if (params.y !== undefined) y = Number(params.y);
-
+        
         // --- 3. 表示処理 ---
-        // 既に同名のキャラクターがいれば、上書きする前に破棄する
         if (manager.scene.characters[name]) {
             manager.scene.characters[name].destroy();
         }
-    const layoutData = manager.scene.cache.json.get('layout_data');
-        const gameLayout = layoutData.GameScene ? layoutData.GameScene.objects : [];
-        const layout = gameLayout.find(obj => obj.name === params.name);
 
-        // --- 3. 表示処理 ---
-        const chara = manager.scene.add.image(x, y, storage); // まずはデフォルト位置で生成
-        chara.name = params.name;
+        // ★★★ 変更点: シーンに「既に存在する」オブジェクトを探す ★★★
+        let chara = manager.scene.layer.character.list.find(c => c.name === name);
 
-        if (layout) {
-            // レイアウトデータがあれば、その情報で上書き
-            chara.setPosition(layout.x, layout.y);
-            chara.setScale(layout.scaleX, layout.scaleY);
-            chara.setAngle(layout.angle);
-            chara.setAlpha(0); // フェードインのために一度透明にする
+        if (chara) {
+            // 既にJSONで生成済みなら、テクスチャと位置を更新
+            chara.setTexture(storage);
+            chara.setPosition(x, y);
+            chara.setVisible(true); // 表示状態にする
+            console.log(`[chara_show] Updated existing character: ${name}`);
         } else {
-            // なければアルファだけ設定
-            chara.setAlpha(0);
+            // 存在しなければ、新規に生成
+            chara = manager.scene.add.image(x, y, storage);
+            chara.name = name;
+            manager.scene.layer.character.add(chara);
+            console.log(`[chara_show] Created new character: ${name}`);
         }
+        
+        manager.scene.characters[name] = chara;
+        chara.setAlpha(0); // フェードインのために一度透明に
 
-        manager.layers.character.add(chara);
-        manager.scene.characters[params.name] = chara;
-  const stateManager = manager.scene.sys.registry.get('stateManager');
-    if (stateManager.sf.debug_mode) {
+        // エディタ登録処理 (変更なし)
         const editor = manager.scene.plugins.get('EditorPlugin');
-
-       
-    
         if (editor) {
             editor.makeEditable(chara, manager.scene);
-        }}
+        }
+
         // --- 4. アニメーション ---
         const time = Number(params.time) || 0;
 
