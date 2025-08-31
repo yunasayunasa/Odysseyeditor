@@ -3,23 +3,20 @@
 export default class EditorUI {
     constructor(game, editorPlugin) {
         this.game = game;
-        this.plugin = editorPlugin; // EditorPluginへの参照を保持
+        this.plugin = editorPlugin;
 
         // --- HTML要素の取得 ---
-        this.editorPanel = document.getElementById('editor-panel');
-        this.assetBrowserPanel = document.getElementById('asset-browser');
-        this.assetBrowserToggleBtn = document.getElementById('toggle-asset-browser');
         this.assetListContainer = document.getElementById('asset-list');
 
-        // --- 各機能の初期化 ---
-        this.initPanelDrag(this.editorPanel, '#editor-title');
-        this.initPanelDrag(this.assetBrowserPanel, '#asset-browser-title');
-    
+        // ★★★ 変更点1: 不要になった機能の初期化を削除 ★★★
+        // this.initPanelDrag(...) は呼び出さない
+        // this.initAssetBrowserToggle() は呼び出さない
+
+        // --- 必要な機能だけを初期化 ---
+        this.populateAssetBrowser();
         this.initDragAndDrop();
     }
     
-   
-
     /**
      * アセット・ブラウザの中身（アセットリスト）を動的に生成する
      */
@@ -85,7 +82,9 @@ export default class EditorUI {
 
             for (let i = scenes.length - 1; i >= 0; i--) {
                 const scene = scenes[i];
-                if (scene.cameras.main.hitTest(pointer.x, pointer.y) && scene.scene.key !== 'UIScene') {
+                // game-container の中にあるキャンバス座標に変換してヒットテスト
+                const localPoint = scene.cameras.main.getWorldPoint(pointer.x, pointer.y);
+                if (scene.cameras.main.worldView.contains(localPoint.x, localPoint.y) && scene.scene.key !== 'UIScene') {
                     targetScene = scene;
                     break;
                 }
@@ -99,4 +98,6 @@ export default class EditorUI {
             }
         });
     }
+
+    // ★★★ 変更点2: 不要になった initPanelDrag と initAssetBrowserToggle メソッドを完全に削除 ★★★
 }
