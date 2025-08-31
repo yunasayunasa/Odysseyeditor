@@ -56,7 +56,7 @@ export default class EditorPlugin extends Phaser.Plugins.BasePlugin {
     //  このリスナー自体が不要になる場合もありますが、念のため残します。
     gameObject.on('dragstart', (pointer) => {
         // ドラッグが開始されたことを示すログ（デバッグ用）
-        // console.log('Drag started on:', gameObject.name);
+         console.log('Drag started on:', gameObject.name);
     });
         
         gameObject.on('drag', (pointer, dragX, dragY) => {
