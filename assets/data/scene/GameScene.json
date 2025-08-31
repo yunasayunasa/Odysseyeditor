@@ -24,6 +24,19 @@
       "angle": 0,
       "alpha": 1,
       "visible": false 
+    },
+    
+    {
+      "name": "yuna_normal_1",
+      "x": 0,
+      "y": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "angle": 0,
+      "alpha": 1,
+      "type": "initialize"
     }
+  
   ]
+
 }
