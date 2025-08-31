@@ -78,6 +78,26 @@ export default class PreloadScene extends Phaser.Scene {
                     charaDefs[charaName].face[faceName] = key;
                 }
             }
+
+             // 1. グローバルなアセットリストを作成
+        const assetList = [];
+        
+        // キャッシュに読み込まれた全アセットの情報をループで確認
+        for (const key in ASSET_DEFINE) {
+            const asset = ASSET_DEFINE[key];
+            
+            // アセットリストに、必要な情報だけを抽出して追加
+            assetList.push({
+                key: key,       // アセットキー (e.g., 'yuko_smile')
+                type: asset.type, // アセットの種類 (e.g., 'image')
+                path: asset.path  // ファイルのパス
+            });
+        }
+
+        // 2. 作成したアセットリストを、ゲーム全体のレジストリに登録
+        this.registry.set('asset_list', assetList);
+        console.log(`[PreloadScene] ${assetList.length}個のアセット情報をレジストリに登録しました。`);
+        
             
             // SystemSceneを起動し、そのCREATEイベントを待ってから依存関係を解決する
               this.scene.launch('SystemScene', { initialGameData: {
