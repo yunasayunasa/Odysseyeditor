@@ -217,20 +217,46 @@ export default class EditorPlugin extends Phaser.Plugins.BasePlugin {
 // ... (constructor, init, populateTransformTab などは変更なし)
 
      /**
-     * Physicsタブの中身を生成する（物理法則準拠・最終版）
+     * Physicsタブの中身を生成する（最終完成版）
      */
     populatePhysicsTab() {
         this.physicsPropsContainer.innerHTML = '';
         const gameObject = this.selectedObject;
         if (!gameObject) return;
 
+        // ★★★ 変更点3: オン/オフボタンの切り替えロジック ★★★
         if (gameObject.body) {
+            // 物理ボディを持っている場合
             this.createPhysicsPropertiesUI(gameObject);
+
+            const removeButton = document.createElement('button');
+            removeButton.innerText = 'Disable Physics';
+            removeButton.style.backgroundColor = '#c44';
+            removeButton.onclick = () => {
+                if (this.selectedObject) {
+                    this.selectedObject.body.destroy();
+                    this.updatePropertyPanel();
+                }
+            };
+            this.physicsPropsContainer.appendChild(removeButton);
+
         } else {
-            this.createEnablePhysicsButton(gameObject);
+            // 物理ボディを持っていない場合
+            const addButton = document.createElement('button');
+            addButton.innerText = 'Enable Arcade Physics';
+            addButton.onclick = () => {
+                if (this.selectedObject) {
+                    this.pluginManager.game.scene.getScene('GameScene').physics.add.existing(this.selectedObject, false);
+                    if (this.selectedObject.body) {
+                        this.selectedObject.body.allowGravity = false;
+                        this.selectedObject.body.collideWorldBounds = true;
+                    }
+                    this.updatePropertyPanel();
+                }
+            };
+            this.physicsPropsContainer.appendChild(addButton);
         }
     }
-
     /**
      * 「Enable Physics」ボタンを生成する
      */
@@ -267,17 +293,41 @@ export default class EditorPlugin extends Phaser.Plugins.BasePlugin {
     /**
      * 物理パラメータを編集するためのUIを生成する
      */
+    /**
+     * 物理パラメータを編集するためのUIを生成する（最終完成版）
+     */
     createPhysicsPropertiesUI(gameObject) {
         const body = gameObject.body;
         
         // --- ボディタイプ (Static / Dynamic) の切り替え ---
+        // ★★★ 変更点1: Is Static Bodyのチェックボックスを特別に扱う ★★★
         const isStatic = body.isStatic;
-        this.createCheckbox(this.physicsPropsContainer, 'Is Static Body', isStatic, (isStatic) => {
-            // ★★★ 変更点2: 静的/動的を正しく切り替えるロジック ★★★
+        const staticRow = document.createElement('div');
+        const staticLabel = document.createElement('label');
+        staticLabel.innerText = 'Is Static Body';
+        staticLabel.style.width = '160px';
+        const staticCheckbox = document.createElement('input');
+        staticCheckbox.type = 'checkbox';
+        staticCheckbox.checked = isStatic;
+
+        staticCheckbox.addEventListener('change', () => {
+            // チェックボックスが変更されたら、ボディを再生成してパネルを更新する
             this.pluginManager.game.scene.getScene('GameScene').physics.world.remove(body);
-            this.pluginManager.game.scene.getScene('GameScene').physics.add.existing(gameObject, isStatic);
-            this.updatePropertyPanel(); // パネルを再描画して状態を反映
+            this.pluginManager.game.scene.getScene('GameScene').physics.add.existing(gameObject, staticCheckbox.checked);
+
+            // 新しいボディのデフォルト値を設定
+            if (gameObject.body) {
+                gameObject.body.collideWorldBounds = true;
+            }
+            
+            // パネルを再描画して、新しいボディの状態を完全に反映させる
+            this.updatePropertyPanel();
         });
+
+        staticRow.appendChild(staticLabel);
+        staticRow.appendChild(staticCheckbox);
+        this.physicsPropsContainer.appendChild(staticRow);
+
 
         // --- 動的ボディの場合のみ、他のプロパティを表示 ---
         if (!isStatic) {
@@ -291,18 +341,7 @@ export default class EditorPlugin extends Phaser.Plugins.BasePlugin {
         // --- 共通プロパティ ---
         this.createCheckbox(this.physicsPropsContainer, 'Collide World Bounds', body.collideWorldBounds, (value) => body.collideWorldBounds = value);
 
-        // --- ボディを削除するボタン ---
-        const removeButton = document.createElement('button');
-        removeButton.innerText = 'Disable Physics';
-        removeButton.style.backgroundColor = '#c44';
-        removeButton.onclick = () => {
-            if (this.selectedObject) {
-                // ★★★ 変更点3: disableではなく、完全にdestroyする ★★★
-                this.selectedObject.body.destroy();
-                this.updatePropertyPanel();
-            }
-        };
-        this.physicsPropsContainer.appendChild(removeButton);
+        // ★★★ 変更点2: Disableボタンはここでは生成しない ★★★
     }
     // --- UI生成ヘルパーメソッド群 ---
 
@@ -348,13 +387,12 @@ export default class EditorPlugin extends Phaser.Plugins.BasePlugin {
      */
     // src/plugins/EditorPlugin.js
 
-     /**
+       /**
      * チェックボックスのUIパーツを生成する
      */
-      /**
-     * チェックボックスのUIパーツを生成する（双方向データバインディング版）
-     */
     createCheckbox(container, label, initialValue, callback) {
+        // このメソッドは、前回の「双方向データバインディング版」のままで完璧です。
+        // Is Static Bodyの特殊なロジックを分離したことで、このメソッドは汎用的に使えます。
         const row = document.createElement('div');
         const labelEl = document.createElement('label');
         labelEl.innerText = label;
@@ -362,26 +400,11 @@ export default class EditorPlugin extends Phaser.Plugins.BasePlugin {
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.checked = initialValue;
-        
-        checkbox.addEventListener('change', () => {
-            // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-            // ★★★ これがチェックボックスを修正するコードです ★★★
-            // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-            // 1. まず、コールバック関数を呼び出して、ゲームの状態を変更する
-            callback(checkbox.checked);
-            
-            // 2. その後、もしパネルの再描画が必要なら、それを行う
-            //    (今回は'Is Static'の切り替えでパネル全体が再描画されるので、
-            //     この処理がなくても結果的にチェック状態は正しくなるが、
-            //     より堅牢にするための記述)
-            // this.updatePropertyPanel(); 
-        });
-
+        checkbox.addEventListener('change', () => callback(checkbox.checked));
         row.appendChild(labelEl);
         row.appendChild(checkbox);
         container.appendChild(row);
     }
-
     /**
      * レンジスライダーのUIパーツを生成する
      * @param {HTMLElement} container - 追加先のHTML要素
