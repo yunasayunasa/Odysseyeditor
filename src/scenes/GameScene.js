@@ -1,9 +1,10 @@
+// src/scenes/GameScene.js (非継承・最終確定版)
 
-import BaseGameScene from './BaseGameScene.js';
 import ScenarioManager from '../core/ScenarioManager.js';
 import MessageWindow from '../ui/MessageWindow.js';
 import { tagHandlers } from '../handlers/index.js';
-export default class GameScene extends BaseGameScene {
+
+export default class GameScene extends Phaser.Scene { // ★ Phaser.Scene を直接継承
     constructor() {
         super({ key: 'GameScene' });
         
@@ -53,7 +54,54 @@ export default class GameScene extends BaseGameScene {
         }
         console.log(`[GameScene] ${Object.keys(tagHandlers).length} tag handlers registered.`);
 
-       this.applyLayoutAndPhysics();
+       // --- 2. このシーン専用のレイアウト処理 ---
+        const sceneKey = this.scene.key;
+        const layoutData = this.cache.json.get(sceneKey); // PreloadSceneでロード済み
+
+        if (layoutData && layoutData.objects) {
+            console.log(`[${sceneKey}] Building scene from layout data...`);
+            for (const layout of layoutData.objects) {
+                // オブジェクトを生成し、正しいレイヤーに追加する
+                const textureKey = layout.texture || layout.name.split('_')[0];
+                const gameObject = this.add.image(layout.x, layout.y, textureKey);
+                
+                if (layout.name.startsWith('bg_')) {
+                    this.layer.background.add(gameObject);
+                } else {
+                    this.layer.character.add(gameObject);
+                }
+
+                // プロパティを適用
+                this.applyProperties(gameObject, layout);
+            }
+        } else {
+            console.warn(`[${sceneKey}] No layout data found.`);
+        }
+
+        // --- 3. シーンの全てのオブジェクトを編集可能にする ---
+        const editor = this.plugins.get('EditorPlugin');
+        if (editor) {
+            this.children.list.forEach(child => {
+                if (child.list) { child.list.forEach(c => editor.makeEditable(c, this)); }
+                editor.makeEditable(child, this);
+            });
+        }
+        
+        // --- 4. シナリオを開始し、準備完了を通知する ---
+        this.input.on('pointerdown', () => {
+            if (this.scenarioManager) this.scenarioManager.onClick();
+        });
+        
+        this.scenarioManager.loadScenario(this.startScenario, this.startLabel);
+        
+        // ★★★ SystemSceneに頼らず、自分自身でシナリオを開始する ★★★
+        this.time.delayedCall(10, () => {
+            if (this.scenarioManager) this.scenarioManager.next();
+        });
+
+        // ★★★ 最後に、SystemSceneに準備完了を伝える ★★★
+        this.events.emit('scene-ready');
+        console.log(`[GameScene] Setup complete. Scene is ready.`);
     }
      /**
      * BaseGameSceneのfinalizeSetupから呼び出される、このシーン専用の最終処理
@@ -86,6 +134,40 @@ export default class GameScene extends BaseGameScene {
         return gameObject;
     }
   
+     /**
+     * ★★★ 新規メソッド (旧applyPhysicsProperties) ★★★
+     * 単体のオブジェクトに、JSONから読み込んだプロパティを「適用」する
+     */
+    applyProperties(gameObject, layout) {
+        gameObject.name = layout.name;
+        
+        // Transformプロパティを適用
+        gameObject.setPosition(layout.x, layout.y);
+        gameObject.setScale(layout.scaleX, layout.scaleY);
+        gameObject.setAngle(layout.angle);
+        gameObject.setAlpha(layout.alpha);
+if (layout.visible !== undefined) {
+            gameObject.setVisible(layout.visible);
+        }
+        // 物理プロパティを適用
+        if (layout.physics) {
+            const phys = layout.physics;
+            this.physics.add.existing(gameObject, phys.isStatic);
+            if (gameObject.body) {
+                gameObject.body.setSize(phys.width, phys.height);
+                gameObject.body.setOffset(phys.offsetX, phys.offsetY);
+                gameObject.body.allowGravity = phys.allowGravity;
+                gameObject.body.bounce.setTo(phys.bounceX, phys.bounceY);
+                gameObject.body.collideWorldBounds = phys.collideWorldBounds;
+            }
+        }
+
+        // エディタに登録
+        const editor = this.plugins.get('EditorPlugin');
+        if (editor) {
+            editor.makeEditable(gameObject, this);
+        }
+    }
         
     // ★★★ 修正箇所: stop()メソッドを一つに統一し、全てのクリーンアップを行う ★★★
     shutdown() {

@@ -192,36 +192,17 @@ this.tweens.killAll();
 
         // ★★★ 修正の核心 ★★★
         // 起動するシーンの「準備完了」を知らせるカスタムイベントを待つ
-        const targetScene = this.scene.get(sceneKey);
+       const targetScene = this.scene.get(sceneKey);
         
-        // GameSceneは 'gameScene-load-complete' を待つ
-          if (sceneKey === 'GameScene') {
-            targetScene.events.once('scene-ready', () => { // ★ gameScene-load-complete から scene-ready に統一
-                
-                // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-                // ★★★ これが全てを解決する最後のロジックです ★★★
-                // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-                // GameSceneの準備が完全に整ったことを確認してから、
-                // 最初のシナリオ進行を「命令」する
-                targetScene.time.delayedCall(10, () => {
-                    if (targetScene.scenarioManager) {
-                        targetScene.scenarioManager.next();
-                    }
-                });
+        // ★★★ 全てのシーンで、共通の 'scene-ready' イベントだけを待つ ★★★
+        targetScene.events.once('scene-ready', () => {
+            this._onTransitionComplete(sceneKey);
+        });
 
-                // その後で、遷移完了処理を行う
-                this._onTransitionComplete(sceneKey);
-            });
-        } else {
-            // GameScene以外は、'scene-ready' という共通イベントを待つ
-            targetScene.events.once('scene-ready', () => {
-                this._onTransitionComplete(sceneKey);
-            });
-        }
-
-        // リスナーを登録した後に、シーンの起動をスケジュールする
         this.scene.run(sceneKey, params);
     }
+
+     
     /**
      * シーン遷移が完全に完了したときの処理
      * @param {string} sceneKey - 完了したシーンのキー
