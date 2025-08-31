@@ -28,7 +28,7 @@ export default class GameScene extends BaseGameScene {
         this.returnParams = data.returnParams || null;
     }
 
-     async create() { // ★ async を追加
+    create() {
         console.log("[GameScene] Create started.");
         
         this.layer.background = this.add.container(0, 0).setDepth(0);
@@ -53,24 +53,21 @@ export default class GameScene extends BaseGameScene {
         }
         console.log(`[GameScene] ${Object.keys(tagHandlers).length} tag handlers registered.`);
 
-       await this.applyLayoutAndPhysics();
+       this.applyLayoutAndPhysics();
     }
-   /**
+     /**
      * BaseGameSceneのfinalizeSetupから呼び出される、このシーン専用の最終処理
      */
     onSetupComplete() {
+        // 3. 全ての準備が整ったこの場所で、イベントリスナーとシナリオ実行を設定
         this.input.on('pointerdown', () => {
             if (this.scenarioManager) this.scenarioManager.onClick();
         });
         
         this.scenarioManager.loadScenario(this.startScenario, this.startLabel);
         this.time.delayedCall(10, () => this.scenarioManager.next());
-
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-        // ★★★ これがないとSystemSceneが永久に待機します ★★★
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-        super.finalizeSetup(); // 親のfinalizeSetupを呼び出して 'scene-ready' を発行
     }
+
 
     /**
      * GameScene専用のオブジェクト生成ロジック

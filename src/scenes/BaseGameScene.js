@@ -102,24 +102,19 @@ if (layout.visible !== undefined) {
    /**
      * レイアウト適用後に行う、シーンの最終セットアップ。
      */
-    finalizeSetup() {
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-        // ★★★ これが「ホバーで移動できない」を解決するロジックです ★★★
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-        // この時点でシーン内の全てのオブジェクト（JSON由来も、コード由来も）が出揃っているので、
-        // それら全てをエディタの管理対象にする
+     finalizeSetup() {
+        // ★★★ 変更点: ここでまず、全オブジェクトを編集可能にする ★★★
         const editor = this.plugins.get('EditorPlugin');
         if (editor) {
             this.children.list.forEach(child => {
-                // コンテナの中身も再帰的にチェック
                 if (child.list) {
                     child.list.forEach(c => editor.makeEditable(c, this));
                 }
                 editor.makeEditable(child, this);
             });
         }
-
-        // シーン固有の最終処理を呼び出す (もしあれば)
+        
+        // ★★★ 変更点: 次に、子シーンのカスタムセットアップを呼び出す ★★★
         if (this.onSetupComplete) {
             this.onSetupComplete();
         }
@@ -129,3 +124,4 @@ if (layout.visible !== undefined) {
         console.log(`[${this.scene.key}] Setup complete. Scene is ready.`);
     }
 }
+
