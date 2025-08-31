@@ -1,43 +1,47 @@
 // src/plugins/EditorPlugin.js
 
 export default class EditorPlugin extends Phaser.Plugins.BasePlugin {
-    constructor(pluginManager) {
+      constructor(pluginManager) {
         super(pluginManager);
 
         this.selectedObject = null;
-        this.isDragging = false; // ドラッグ状態を管理するためのフラグ
+        this.isDragging = false;
 
-        // HTMLパネルの要素を取得
+        // ★★★ 変更点1: 編集可能オブジェクトを管理するMapを追加 ★★★
+        // Key: シーンキー (e.g., 'UIScene'), Value: そのシーンの編集可能オブジェクトのSet
+        this.editableObjects = new Map();
+
         this.editorPanel = document.getElementById('editor-panel');
         this.editorTitle = document.getElementById('editor-title');
         this.editorPropsContainer = document.getElementById('editor-props');
     }
 
-    // プラグインがゲームに追加される時に一度だけ呼ばれるメソッド
     init() {
-        console.log('[EditorPlugin] Initialized and ready.');
+        console.log('[EditorPlugin] Initialized.');
         if (this.editorPanel) {
             this.editorPanel.style.display = 'block';
         }
+        
+        // ★★★ キーボードショートカット(Pキー)を追加 ★★★
+        this.pluginManager.game.input.keyboard.on('keydown-P', this.exportLayoutToJson, this);
     }
 
      /**
-     * ゲームオブジェクトを編集可能にするためのメインメソッド
-     * @param {Phaser.GameObjects.GameObject} gameObject - 編集可能にしたいオブジェクト
-     * @param {Phaser.Scene} scene - ★★★ この引数が重要 ★★★
+     * @param {Phaser.GameObjects.GameObject} gameObject
+     * @param {Phaser.Scene} scene
      */
     makeEditable(gameObject, scene) {
-        // オブジェクトが存在しない、または既に編集可能になっている場合は何もしない
         if (!gameObject || !scene || gameObject.getData('isEditable')) return;
         
-        // オブジェクトにインタラクティブ属性を設定
         gameObject.setInteractive();
+        scene.input.setDraggable(gameObject);
 
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-        // ★★★ これがエラーを解決する正しいコードです ★★★
-        // ★★★ グローバルな 'game.input' ではなく、          ★★★
-        // ★★★ オブジェクトが所属する 'scene.input' を使います   ★★★
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        // ★★★ 変更点2: オブジェクトを管理リストに登録 ★★★
+        const sceneKey = scene.scene.key;
+        if (!this.editableObjects.has(sceneKey)) {
+            this.editableObjects.set(sceneKey, new Set());
+        }
+        this.editableObjects.get(sceneKey).add(gameObject);
         scene.input.setDraggable(gameObject);
 
         // --- オブジェクトに個別のイベントリスナーを設定 (ここから下は変更なし) ---
@@ -136,14 +140,64 @@ gameObject.y = Math.round(dragY);
             row.appendChild(input);
             this.editorPropsContainer.appendChild(row);
         }
+
+    }
+
+   /**
+     * ★★★ 変更点3: exportLayoutToJsonメソッドを完全に書き換える ★★★
+     */
+    exportLayoutToJson() {
+        console.log(`%c--- Exporting Layouts ---`, "color: lightgreen; font-weight: bold;");
+
+        const fullLayoutData = {};
+
+        // 管理しているすべてのシーンに対してループ処理
+        for (const [sceneKey, objects] of this.editableObjects.entries()) {
+            
+            const sceneLayout = {
+                objects: []
+            };
+
+            // 各シーンの編集可能オブジェクトをループ処理
+            for (const gameObject of objects) {
+                // オブジェクトが出力に必要な情報を持っているかチェック
+                if (gameObject.name) {
+                    sceneLayout.objects.push({
+                        name: gameObject.name,
+                        x: Math.round(gameObject.x),
+                        y: Math.round(gameObject.y),
+                        scaleX: parseFloat(gameObject.scaleX.toFixed(2)),
+                        scaleY: parseFloat(gameObject.scaleY.toFixed(2)),
+                        angle: Math.round(gameObject.angle),
+                        alpha: parseFloat(gameObject.alpha.toFixed(2)),
+                    });
+                } else {
+                    console.warn(`[EditorPlugin] Object of type ${gameObject.type} has no name and was not exported.`);
+                }
+            }
+            
+            // シーンにエクスポート対象のオブジェクトがあれば、最終データに追加
+            if (sceneLayout.objects.length > 0) {
+                fullLayoutData[sceneKey] = sceneLayout;
+            }
+        }
+
+        // 最終的なJSONデータを整形してコンソールに出力
+        const jsonString = JSON.stringify(fullLayoutData, null, 2);
+        console.log(jsonString);
+
+        // (将来的に) クリップボードへのコピー機能
+        // navigator.clipboard.writeText(jsonString).then(() => {
+        //     console.log('%cLayout JSON copied to clipboard!', 'color: cyan;');
+        // });
     }
 
     // プラグインがゲームから削除される時に呼ばれるメソッド
-    destroy() {
+        destroy() {
+        this.pluginManager.game.input.keyboard.off('keydown-P', this.exportLayoutToJson, this);
         if (this.editorPanel) {
             this.editorPanel.style.display = 'none';
         }
-        // 親クラスのdestroyを呼び出して、クリーンアップを完了させる
         super.destroy();
     }
 }
