@@ -3,10 +3,10 @@
     "objects": [
       {
         "name": "coin_hud",
-        "x": 261,
-        "y": 126,
+        "x": 71,
+        "y": 105,
         "scaleX": 1,
-        "scaleY": 5,
+        "scaleY": 1.71,
         "angle": 0,
         "alpha": 1
       },
@@ -30,8 +30,8 @@
       },
       {
         "name": "menu_button",
-        "x": 129,
-        "y": 389,
+        "x": 85,
+        "y": 659,
         "scaleX": 1,
         "scaleY": 1,
         "angle": 0,
@@ -50,21 +50,19 @@
   },
   "GameScene": {
     "objects": [
-      
+      {
+        "name": "yuna",
+        "x": 777,
+        "y": 677,
+        "scaleX": 1,
+        "scaleY": 1,
+        "angle": -21,
+        "alpha": 1
+      },
       {
         "name": "kaito",
         "x": 802,
         "y": 413,
-        "scaleX": 1,
-        "scaleY": 1,
-        "angle": 0,
-        "alpha": 1
-      },
-     
-      {
-        "name": "yuna",
-        "x": 280,
-        "y": 450,
         "scaleX": 1,
         "scaleY": 1,
         "angle": 0,
