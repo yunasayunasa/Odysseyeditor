@@ -66,9 +66,22 @@ export default class EditorUI {
         });
 
     
-     const gameCanvas = this.game.canvas;
-        gameCanvas.addEventListener('drop', (event) => {
+      // --- 1. dragenter: ドラッグ要素がキャンバス領域に「入った」瞬間のイベント ---
+        // ここで preventDefault を呼ぶのが最も確実
+        gameCanvas.addEventListener('dragenter', (event) => {
             event.preventDefault();
+        });
+
+        // --- 2. dragover: ドラッグ要素がキャンバス領域の上を「移動中」のイベント ---
+        // こちらでも preventDefault を呼んでおくことで、より確実になる
+        gameCanvas.addEventListener('dragover', (event) => {
+            event.preventDefault();
+        });
+        
+        // --- 3. drop: ドラッグ要素がキャンバス上で「離された」瞬間のイベント ---
+        gameCanvas.addEventListener('drop', (event) => {
+            event.preventDefault(); // 念のためここでも呼ぶ
+
             const assetKey = event.dataTransfer.getData('text/plain');
             if (!assetKey) return;
 
@@ -78,40 +91,24 @@ export default class EditorUI {
 
             for (let i = scenes.length - 1; i >= 0; i--) {
                 const scene = scenes[i];
-
-                // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-                // ★★★ これがエラーを修正する正しい一行です ★★★
-                // ★★★ 'scene.cameras.main.hitTest' ではなく、      ★★★
-                // ★★★ 'scene.input.hitTest' を使います            ★★★
-                // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-                const hitObjects = scene.input.hitTest(pointer, scene.children.list, scene.cameras.main);
-                
-                // カメラの範囲内にポインターがあり、かつUISceneではない場合
-                // hitTestはカメラ範囲外なら空配列を返すので、これだけで判定可能
-                if (hitObjects.length >= 0 && scene.scene.key !== 'UIScene' && scene.cameras.main.worldView.contains(pointer.x, pointer.y)) {
+                // マウスカーソルがカメラの表示領域内にあるか、より単純な方法でチェック
+                if (scene.cameras.main.worldView.contains(pointer.x, pointer.y) && scene.scene.key !== 'UIScene') {
                     targetScene = scene;
                     break;
                 }
             }
 
-
             if (targetScene) {
-                // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-                // ★★★ ここからが、レイヤー問題を解決する核心部です ★★★
-                // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+                const newImage = new Phaser.GameObjects.Image(targetScene, pointer.worldX, pointer.worldY, assetKey);
                 
-                let newImage;
-
-                // 1. まず、PhaserのGameObjectとして画像オブジェクトを「作成」する
-                //    まだシーンには追加しない
-                 const imageObject = new Phaser.GameObjects.Image(targetScene, pointer.worldX, pointer.worldY, assetKey);
                 if (targetScene.scene.key === 'GameScene' && targetScene.layer && targetScene.layer.character) {
-                    targetScene.layer.character.add(imageObject);
+                    targetScene.layer.character.add(newImage);
                 } else {
-                    targetScene.add.existing(imageObject);
+                    targetScene.add.existing(newImage);
                 }
-                imageObject.name = `${assetKey}_${Date.now()}`;
-                this.plugin.makeEditable(imageObject, targetScene);
+                
+                newImage.name = `${assetKey}_${Date.now()}`;
+                this.plugin.makeEditable(newImage, targetScene);
             }
         });
     }
