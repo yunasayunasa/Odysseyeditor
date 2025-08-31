@@ -33,7 +33,9 @@
 [delay speed=80]
 yuna:「ようこそ！これは、あなたと一緒に作ったゲームエンジンのチュートリアルです。」
 [p]
-
+ここから新しいアクションシーンが始まるよ！
+[p]
+[jump storage=JumpScene]
 yuna:「このゲームを起動するのは、&sf.boot_count 回目ですね。」
 [p]
  ; ★ sf.boot_countのテスト

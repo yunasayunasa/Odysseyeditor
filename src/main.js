@@ -10,6 +10,7 @@ import BacklogScene from './scenes/BacklogScene.js';
 import ActionScene from './scenes/ActionScene.js';
 import BattleScene from './scenes/BattleScene.js';
 import NovelOverlayScene from './scenes/NovelOverlayScene.js';
+import JumpScene from './scenes/JumpScene.js';
 import EditorPlugin from './plugins/EditorPlugin.js'; 
 const config = {
     type: Phaser.AUTO,
@@ -32,6 +33,7 @@ const config = {
         BacklogScene, 
         ActionScene,
          BattleScene,
+         JumpScene,
         NovelOverlayScene
     ],
     plugins: {

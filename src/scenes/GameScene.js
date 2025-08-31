@@ -82,7 +82,8 @@ export default class GameScene extends Phaser.Scene {
         this.layer.message.add(this.messageWindow); 
         this.scenarioManager = new ScenarioManager(this, this.layer, this.charaDefs, this.messageWindow, this.soundManager, this.stateManager, this.configManager);
   // ★★★ 追加: 最初のクリックで一度だけAudioContextを有効化する ★★★
-     
+     this.applyLayoutAndPhysics();
+
 
         // ★★★ 追加: 最初のクリックで一度だけAudioContextを有効化する ★★★
         this.input.once('pointerdown', () => {
@@ -155,6 +156,71 @@ export default class GameScene extends Phaser.Scene {
     
         super.shutdown(); // 親のshutdownを呼ぶ
 }
+
+  /**
+     * ★★★ これが、新しく追加する「標準初期化ルーチン」です ★★★
+     * シーンキーと同じ名前のJSONデータを読み込み、レイアウトと物理を適用する
+     */
+    applyLayoutAndPhysics() {
+        const sceneKey = this.scene.key; // 'GameScene'
+        // layout_data.json の中に、このシーン用のデータがあるかチェック
+        const layoutData = this.cache.json.get('layout_data');
+        if (!layoutData || !layoutData[sceneKey]) {
+            console.log(`[${sceneKey}] No layout data found. Skipping application.`);
+            return;
+        }
+
+        console.log(`[${sceneKey}] Applying layout and physics data...`);
+        const objectsLayout = layoutData[sceneKey].objects;
+        
+        // JSONの定義に基づいて、オブジェクトをループで生成・設定
+        for (const layout of objectsLayout) {
+            // シーン内に同名のオブジェクトが既に存在するかチェック
+            // (シナリオなどで先に生成されている場合があるため)
+            let gameObject = this.children.list.find(obj => obj.name === layout.name);
+            
+            if (!gameObject) {
+                // オブジェクトが存在しなければ、新規に生成する
+                // TODO: 'type' プロパティに応じて生成するオブジェクトを切り替える
+                //       (e.g., Image, Sprite, Text...)
+                //       今は 'Image' だけを想定
+                gameObject = this.add.image(layout.x, layout.y, layout.name.split('_')[0]); // 仮のテクスチャキー
+                gameObject.name = layout.name;
+                
+                // GameSceneの場合は、characterレイヤーに追加
+                if (this.layer && this.layer.character) {
+                    this.layer.character.add(gameObject);
+                }
+            }
+
+            // --- Transformプロパティを適用 ---
+            gameObject.setPosition(layout.x, layout.y);
+            gameObject.setScale(layout.scaleX, layout.scaleY);
+            gameObject.setAngle(layout.angle);
+            gameObject.setAlpha(layout.alpha);
+            
+            // --- 物理プロパティが定義されていれば、それを適用 ---
+            if (layout.physics) {
+                const phys = layout.physics;
+                this.physics.add.existing(gameObject, phys.isStatic);
+
+                if(gameObject.body) {
+                    gameObject.body.setSize(phys.width, phys.height);
+                    gameObject.body.setOffset(phys.offsetX, phys.offsetY);
+                    gameObject.body.allowGravity = phys.allowGravity;
+                    gameObject.body.bounce.setTo(phys.bounceX, phys.bounceY);
+                    gameObject.body.collideWorldBounds = phys.collideWorldBounds;
+                }
+            }
+            
+            // --- エディタプラグインに登録 ---
+            const editor = this.plugins.get('EditorPlugin');
+            if (editor) {
+                editor.makeEditable(gameObject, this);
+            }
+        }
+    }
+    
 
       // ★★★ 修正箇所: onFVariableChanged, updatePlayerHpBar, updateCoinHudを削除し、onFVariableChangedに一本化 ★★★
     onFVariableChanged(key, value) {
