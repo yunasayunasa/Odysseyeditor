@@ -134,7 +134,30 @@
         #editor-props button:hover {
             background-color: #1177bb;
         }
-
+ /* ★★★ ここからが、タブUI用の新しいCSSです ★★★ */
+        .tab-buttons {
+            display: flex;
+            background-color: #3c3c3c;
+        }
+        .tab-button {
+            padding: 8px 12px;
+            cursor: pointer;
+            border: none;
+            background-color: transparent;
+            color: #a0a0a0;
+            font-size: 13px;
+            border-bottom: 2px solid transparent;
+        }
+        .tab-button.active {
+            color: #ffffff;
+            border-bottom: 2px solid #0e639c;
+        }
+        .tab-content {
+            display: none; /* デフォルトでは非表示 */
+        }
+        .tab-content.active {
+            display: block; /* activeクラスが付いたタブの中身だけ表示 */
+        }
     </style>
 </head>
 <body>
@@ -157,11 +180,28 @@
         </div>
 
         <!-- プロパティパネル -->
+           <!-- ★★★ プロパティパネルのHTML構造をタブ形式に大改造 ★★★ -->
         <div id="editor-panel" class="editor-panel">
             <div id="editor-title" class="panel-header">Properties</div>
             <div class="panel-content">
-                <div id="editor-props">
-                    <!-- プロパティ編集欄はここにJSで動的に生成されます -->
+                <!-- タブ切り替えボタン -->
+                <div class="tab-buttons">
+                    <button class="tab-button active" data-tab="transform">Transform</button>
+                    <button class="tab-button" data-tab="physics">Physics</button>
+                </div>
+
+                <!-- Transformタブの中身 -->
+                <div id="transform-tab" class="tab-content active">
+                    <div id="editor-props">
+                        <!-- 既存のプロパティ(x, y, scaleなど)はここに入る -->
+                    </div>
+                </div>
+
+                <!-- Physicsタブの中身 -->
+                <div id="physics-tab" class="tab-content">
+                    <div id="physics-props">
+                        <!-- 物理パラメータのUIはここにJSで動的に生成されます -->
+                    </div>
                 </div>
             </div>
         </div>

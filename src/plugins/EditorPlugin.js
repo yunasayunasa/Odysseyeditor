@@ -12,11 +12,31 @@ export default class EditorPlugin extends Phaser.Plugins.BasePlugin {
         this.editorPanel = document.getElementById('editor-panel');
         this.editorTitle = document.getElementById('editor-title');
         this.editorPropsContainer = document.getElementById('editor-props');
+         // ★★★ 変更点1: 新しいHTML要素への参照を追加 ★★★
+        this.transformTab = document.getElementById('transform-tab');
+        this.physicsTab = document.getElementById('physics-tab');
+        this.physicsPropsContainer = document.getElementById('physics-props');
+        this.tabButtons = document.querySelectorAll('.tab-button');
     }
+    
 
     init() {
         console.log('[EditorPlugin] Initialized.');
+           // ★★★ 変更点2: タブ切り替えのイベントリスナーを設定 ★★★
+        this.tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                // すべてのタブボタンとコンテンツから 'active' クラスを削除
+                this.tabButtons.forEach(btn => btn.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+                
+                // クリックされたボタンと、対応するコンテンツに 'active' クラスを追加
+                const tabId = button.dataset.tab;
+                button.classList.add('active');
+                document.getElementById(`${tabId}-tab`).classList.add('active');
+            });
+        });
     }
+    
 
     /**
      * @param {Phaser.GameObjects.GameObject} gameObject
@@ -57,85 +77,58 @@ export default class EditorPlugin extends Phaser.Plugins.BasePlugin {
     /**
      * プロパティ編集パネルの表示を更新する
      */
+   /**
+     * ★★★ 変更点3: updatePropertyPanelをタブ対応版に完全に置き換える ★★★
+     */
     updatePropertyPanel() {
-        // このメソッドは、復活させたプロパティのおかげで正しく動作します
-        if (!this.editorPanel || !this.editorPropsContainer || !this.editorTitle) return;
-        
+        if (!this.editorPanel) return;
+
+        // まず、両方のタブの中身を空にする
         this.editorPropsContainer.innerHTML = '';
-        
+        this.physicsPropsContainer.innerHTML = '';
+
         if (!this.selectedObject) {
-            // オブジェクトが選択されていない場合、パネルは非表示にする
-            this.editorPanel.style.visibility = 'hidden'; 
+            this.editorPanel.style.visibility = 'hidden';
             return;
         }
-        
+
         this.editorPanel.style.visibility = 'visible';
         this.editorTitle.innerText = `Editing: ${this.selectedObject.name || '(no name)'}`;
 
-        const properties = {
-            x: { type: 'number', step: 1 },
-            y: { type: 'number', step: 1 },
-            scaleX: { type: 'range', min: 0.1, max: 5, step: 0.01 },
-            scaleY: { type: 'range', min: 0.1, max: 5, step: 0.01 },
-            angle: { type: 'range', min: -180, max: 180, step: 1 },
-            alpha: { type: 'range', min: 0, max: 1, step: 0.01 }
-        };
+        // --- Transformタブの中身を生成 ---
+        this.populateTransformTab();
 
+        // --- Physicsタブの中身を生成 ---
+        this.populatePhysicsTab();
+    }
+    
+    /**
+     * ★★★ 新規メソッド: Transformタブの中身を生成する ★★★
+     */
+    populateTransformTab() {
+        const properties = { /* ... x, y, scaleなど ... */ };
         for (const key in properties) {
-            if (this.selectedObject[key] === undefined) continue;
-
-            const prop = properties[key];
-            const value = this.selectedObject[key];
-            
-            const row = document.createElement('div');
-            row.style.marginBottom = '8px';
-            
-            const label = document.createElement('label');
-            label.innerText = `${key}: `;
-            label.style.display = 'inline-block';
-            label.style.width = '70px';
-
-            const input = document.createElement('input');
-            input.type = prop.type;
-            if (prop.min !== undefined) input.min = prop.min;
-            if (prop.max !== undefined) input.max = prop.max;
-            if (prop.step !== undefined) input.step = prop.step;
-            input.value = value;
-            input.style.width = '150px';
-
-            input.addEventListener('input', (e) => {
-                const newValue = parseFloat(e.target.value);
-                if (!isNaN(newValue)) {
-                    this.selectedObject[key] = newValue;
-                }
-            });
-
-            row.appendChild(label);
-            row.appendChild(input);
-            this.editorPropsContainer.appendChild(row);
+            // ... (これまでのプロパティHTML要素の生成ロジックをここに移動)
         }
-   // --- 区切り線 ---
-        const separator = document.createElement('hr');
-        separator.style.borderColor = '#555';
-        this.editorPropsContainer.appendChild(separator);
+        // ... (エクスポートボタンもここに移動)
+    }
 
-        // --- エクスポートボタン ---
-        const exportButton = document.createElement('button');
-        exportButton.innerText = 'Export Layout (to Console)';
-        exportButton.style.width = '100%';
-        exportButton.style.padding = '8px';
-        exportButton.style.backgroundColor = '#4a4';
-        exportButton.style.color = 'white';
-        exportButton.style.border = 'none';
-        exportButton.style.borderRadius = '3px';
-        exportButton.style.cursor = 'pointer';
-
-        // ボタンがクリックされたら、exportLayoutToJsonメソッドを呼び出す
-        exportButton.addEventListener('click', () => {
-            this.exportLayoutToJson();
-        });
-
-        this.editorPropsContainer.appendChild(exportButton);
+    /**
+     * ★★★ 新規メソッド: Physicsタブの中身を生成する ★★★
+     */
+    populatePhysicsTab() {
+        const gameObject = this.selectedObject;
+        
+        // オブジェクトが物理ボディを持っているかチェック
+        if (gameObject && gameObject.body) {
+            // ボディを持っている場合:
+            // パラメータ編集用のUIをここに生成していく（次のステップで実装）
+            this.physicsPropsContainer.innerHTML = `<p>Physics properties for ${gameObject.name}.</p>`;
+        } else {
+            // ボディを持っていない場合:
+            // 物理ボディを追加するためのボタンを表示する（これも次のステップで）
+            this.physicsPropsContainer.innerHTML = `<p>This object has no physics body.</p>`;
+        }
     }
     
 

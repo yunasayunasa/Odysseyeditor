@@ -38,6 +38,18 @@ const config = {
         global: [
             { key: 'EditorPlugin', plugin: EditorPlugin, start: false }
         ]
+    },
+    physics: {
+        default: 'arcade', // デフォルトの物理エンジンとして 'arcade' を選択
+        arcade: {
+            gravity: { y: 300 }, // ゲーム全体に適用される標準の重力（y軸方向へ300）
+            
+            // --- デバッグ設定 ---
+            // これをtrueにすると、全ての物理ボディの当たり判定と速度ベクトルが
+            // 色付きの線で表示されるようになります。
+            // 開発中はtrueにしておき、リリース時にはfalseにするのが一般的です。
+            debug: true 
+        }
     }
 };
 
