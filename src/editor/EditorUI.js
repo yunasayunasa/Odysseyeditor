@@ -14,67 +14,11 @@ export default class EditorUI {
         // --- 各機能の初期化 ---
         this.initPanelDrag(this.editorPanel, '#editor-title');
         this.initPanelDrag(this.assetBrowserPanel, '#asset-browser-title');
-        this.initAssetBrowserToggle();
-        this.populateAssetBrowser();
+    
         this.initDragAndDrop();
     }
     
-    /**
-     * 指定されたHTMLパネルを、ヘッダー部分を掴んでドラッグ移動できるようにする
-     * @param {HTMLElement} panel - 対象のパネル要素
-     * @param {string} headerSelector - ドラッグハンドルとなるヘッダーのCSSセレクタ
-     */
-   initPanelDrag(panel, headerSelector) {
-        if (!panel) return;
-        const header = panel.querySelector(headerSelector);
-        if (!header) return;
-
-        let isDragging = false;
-        let offsetX, offsetY;
-
-        header.addEventListener('mousedown', (e) => {
-            // ★★★★★★★★★★★★★★★★★★★★★★★★★★
-            // ★★★ これが修正箇所です ★★★
-            // ★★★ ヘッダー自身がクリックされた時だけイベントを止める ★★★
-            // ★★★★★★★★★★★★★★★★★★★★★★★★★★
-            if (e.target === header) {
-                isDragging = true;
-                offsetX = e.clientX - panel.offsetLeft;
-                offsetY = e.clientY - panel.offsetTop;
-                window.addEventListener('mousemove', onMouseMove);
-                window.addEventListener('mouseup', onMouseUp);
-            }
-        });
-
-        const onMouseMove = (e) => {
-            if (isDragging) {
-                panel.style.left = `${e.clientX - offsetX}px`;
-                panel.style.top = `${e.clientY - offsetY}px`;
-                panel.style.right = 'auto';
-            }
-        };
-
-        const onMouseUp = (e) => {
-            isDragging = false;
-            window.removeEventListener('mousemove', onMouseMove);
-            window.removeEventListener('mouseup', onMouseUp);
-        };
-    }
-    
-    /**
-     * アセット・ブラウザの表示/非表示を切り替えるトグルボタンを初期化する
-     */
-    initAssetBrowserToggle() {
-        if (!this.assetBrowserPanel || !this.assetBrowserToggleBtn) return;
-
-        this.assetBrowserPanel.style.display = 'none';
-        this.assetBrowserToggleBtn.style.display = 'block';
-
-        this.assetBrowserToggleBtn.addEventListener('click', () => {
-            const isHidden = this.assetBrowserPanel.style.display === 'none';
-            this.assetBrowserPanel.style.display = isHidden ? 'block' : 'none';
-        });
-    }
+   
 
     /**
      * アセット・ブラウザの中身（アセットリスト）を動的に生成する

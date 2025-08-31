@@ -106,13 +106,7 @@ export default class UIScene extends Phaser.Scene {
             systemScene.events.on('transition-complete', this.onSceneTransition, this);
         }
         
-        this.input.on('pointerdown', (pointer) => {
-            const hitObjects = this.game.input.hitTest(pointer, this.children.list, this.cameras.main);
-            if (hitObjects.length === 0) {
-                const editor = this.plugins.get('EditorPlugin');
-                if (editor) editor.onScenePointerDown();
-            }
-        });
+      
 
         console.log("UIScene: UI生成完了");
     }

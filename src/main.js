@@ -15,8 +15,9 @@ const config = {
     type: Phaser.AUTO,
     scale: {
         mode: Phaser.Scale.FIT,
-        parent: 'phaser-game',
+        parent: 'game-container', // ゲームキャンバスの親要素IDを指定
         autoCenter: Phaser.Scale.CENTER_BOTH,
+        
         width: 1280,
         height: 720
     },
