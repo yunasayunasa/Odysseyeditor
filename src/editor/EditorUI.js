@@ -65,7 +65,8 @@ export default class EditorUI {
             }
         });
 
-    
+          const gameCanvas = this.game.canvas;
+
       // --- 1. dragenter: ドラッグ要素がキャンバス領域に「入った」瞬間のイベント ---
         // ここで preventDefault を呼ぶのが最も確実
         gameCanvas.addEventListener('dragenter', (event) => {
