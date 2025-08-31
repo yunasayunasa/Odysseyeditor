@@ -55,6 +55,42 @@
             width: 70px; /* ラベルの幅を揃える */
             font-size: 14px;
         }
+    /* ★★★ 変更点1: ヘッダー部分の共通スタイルを追加 ★★★ */
+        .panel-header {
+            padding: 5px;
+            cursor: move; /* ドラッグできることを示すカーソル */
+            background-color: #555;
+            color: white;
+            border-bottom: 1px solid #666;
+            border-radius: 5px 5px 0 0; /* 上の角だけ丸くする */
+            user-select: none; /* ドラッグ中にテキスト選択が起きないようにする */
+        }
+        
+        /* ★★★ 変更点2: パネルのコンテンツ部分のスタイルを追加 ★★★ */
+        .panel-content {
+            padding: 10px;
+        }
+
+        /* ★★★ 変更点3: 元のpaddingを削除 ★★★ */
+        #editor-panel, #asset-browser {
+            padding: 0; /* 内側の余白は .panel-content が担当するので削除 */
+        }
+        
+        /* ★★★ 変更点4: アセット・ブラウザの表示/非表示切り替えボタン ★★★ */
+        #toggle-asset-browser {
+            position: absolute;
+            top: 10px;
+            right: 280px; /* アセットブラウザがあった場所 */
+            z-index: 10000;
+            padding: 10px;
+            background-color: #4488ff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: none; /* JSで表示させる */
+        }
+
+
       #asset-browser {
             position: absolute;
             top: 10px;
@@ -134,7 +170,25 @@
             <!-- アセットのリストはここにJavaScriptで動的に生成されます -->
         </div>
     </div>
+ 
+    <!-- ★★★ 変更点5: トグルボタンを追加 ★★★ -->
+    <button id="toggle-asset-browser">Assets</button>
 
+    <!-- ★★★ 変更点6: プロパティパネルのHTML構造を変更 ★★★ -->
+    <div id="editor-panel">
+        <div id="editor-title" class="panel-header">Editing: (no name)</div>
+        <div class="panel-content">
+            <div id="editor-props"></div>
+        </div>
+    </div>
+
+    <!-- ★★★ 変更点7: アセット・ブラウザのHTML構造を変更 ★★★ -->
+    <div id="asset-browser">
+        <div id="asset-browser-title" class="panel-header">Asset Browser</div>
+        <div class="panel-content">
+            <div id="asset-list"></div>
+        </div>
+    </div>
 
     <script type="module" src="src/main.js"></script>
 </body>
