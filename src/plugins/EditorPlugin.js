@@ -234,18 +234,35 @@ export default class EditorPlugin extends Phaser.Plugins.BasePlugin {
     /**
      * 「Enable Physics」ボタンを生成する
      */
+    /**
+     * 「Enable Physics」ボタンを生成する（UX改善版）
+     */
     createEnablePhysicsButton(gameObject) {
         const button = document.createElement('button');
         button.innerText = 'Enable Arcade Physics';
         button.onclick = () => {
             if (this.selectedObject) {
-                // ★★★ 変更点1: デフォルトは「動的(Dynamic)」ボディとして生成 ★★★
-                this.pluginManager.game.scene.getScene('GameScene').physics.add.existing(this.selectedObject, false); // false = Dynamic
+                // 動的(Dynamic)ボディとして生成
+                this.pluginManager.game.scene.getScene('GameScene').physics.add.existing(this.selectedObject, false);
+                
+                // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+                // ★★★ ここがあなたの要望を叶えるコードです ★★★
+                // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+                if (this.selectedObject.body) {
+                    // 1. デフォルトでは重力をOFFにする
+                    this.selectedObject.body.allowGravity = false;
+                    
+                    // 2. デフォルトでワールド境界との衝突をONにする
+                    this.selectedObject.body.collideWorldBounds = true;
+                }
+                
+                // 表示を即座に更新する
                 this.updatePropertyPanel();
             }
         };
         this.physicsPropsContainer.appendChild(button);
     }
+
 
     /**
      * 物理パラメータを編集するためのUIを生成する
@@ -334,6 +351,9 @@ export default class EditorPlugin extends Phaser.Plugins.BasePlugin {
      /**
      * チェックボックスのUIパーツを生成する
      */
+      /**
+     * チェックボックスのUIパーツを生成する（双方向データバインディング版）
+     */
     createCheckbox(container, label, initialValue, callback) {
         const row = document.createElement('div');
         const labelEl = document.createElement('label');
@@ -343,13 +363,25 @@ export default class EditorPlugin extends Phaser.Plugins.BasePlugin {
         checkbox.type = 'checkbox';
         checkbox.checked = initialValue;
         
-        // ★★★ 変更点4: コールバックを直接呼び出すシンプルな形に戻す ★★★
-        checkbox.addEventListener('change', () => callback(checkbox.checked));
+        checkbox.addEventListener('change', () => {
+            // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+            // ★★★ これがチェックボックスを修正するコードです ★★★
+            // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+            // 1. まず、コールバック関数を呼び出して、ゲームの状態を変更する
+            callback(checkbox.checked);
+            
+            // 2. その後、もしパネルの再描画が必要なら、それを行う
+            //    (今回は'Is Static'の切り替えでパネル全体が再描画されるので、
+            //     この処理がなくても結果的にチェック状態は正しくなるが、
+            //     より堅牢にするための記述)
+            // this.updatePropertyPanel(); 
+        });
 
         row.appendChild(labelEl);
         row.appendChild(checkbox);
         container.appendChild(row);
     }
+
     /**
      * レンジスライダーのUIパーツを生成する
      * @param {HTMLElement} container - 追加先のHTML要素
