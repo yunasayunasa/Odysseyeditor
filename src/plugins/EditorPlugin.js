@@ -448,55 +448,82 @@ export default class EditorPlugin extends Phaser.Plugins.BasePlugin {
         container.appendChild(row);
     }
 
-   /**
-     * ★★★ 変更点3: exportLayoutToJsonメソッドを完全に書き換える ★★★
+  // src/plugins/EditorPlugin.js
+
+    /**
+     * 現在選択されているオブジェクトが所属するシーンのレイアウト情報を
+     * JSONでコンソールに出力する（シーン主体データI/O版）
      */
     exportLayoutToJson() {
-        console.log(`%c--- Exporting Layouts ---`, "color: lightgreen; font-weight: bold;");
+        // --- 1. どのシーンをエクスポート対象とするかを決定 ---
+        if (!this.selectedObject || !this.selectedObject.scene) {
+            console.warn("[EditorPlugin] Please select an object in the scene you want to export.");
+            // 将来的には、シーンを直接選択するUIを追加しても良い
+            alert("Please select an object in the scene you want to export.");
+            return;
+        }
+        const targetScene = this.selectedObject.scene;
+        const sceneKey = targetScene.scene.key;
 
-        const fullLayoutData = {};
+        console.log(`%c--- Exporting Layout for [${sceneKey}] ---`, "color: lightgreen; font-weight: bold;");
 
-        // 管理しているすべてのシーンに対してループ処理
-        for (const [sceneKey, objects] of this.editableObjects.entries()) {
-            
-            const sceneLayout = {
-                objects: []
-            };
+        // --- 2. エクスポート用のデータ構造を準備 ---
+        const sceneLayoutData = {
+            objects: []
+        };
 
-            // 各シーンの編集可能オブジェクトをループ処理
-            for (const gameObject of objects) {
-                // オブジェクトが出力に必要な情報を持っているかチェック
+        // --- 3. そのシーンに所属する編集可能オブジェクトだけを抽出して処理 ---
+        if (this.editableObjects.has(sceneKey)) {
+            const objectsInScene = this.editableObjects.get(sceneKey);
+
+            for (const gameObject of objectsInScene) {
                 if (gameObject.name) {
-                    sceneLayout.objects.push({
+                    const objData = {
                         name: gameObject.name,
+                        // Transform Component
                         x: Math.round(gameObject.x),
                         y: Math.round(gameObject.y),
                         scaleX: parseFloat(gameObject.scaleX.toFixed(2)),
                         scaleY: parseFloat(gameObject.scaleY.toFixed(2)),
                         angle: Math.round(gameObject.angle),
                         alpha: parseFloat(gameObject.alpha.toFixed(2)),
-                    });
-                } else {
-                    console.warn(`[EditorPlugin] Object of type ${gameObject.type} has no name and was not exported.`);
+                    };
+
+                    // Physics Component (もしあれば)
+                    if (gameObject.body) {
+                        const body = gameObject.body;
+                        objData.physics = {
+                            isStatic: body.isStatic,
+                            width: body.width,
+                            height: body.height,
+                            offsetX: body.offset.x,
+                            offsetY: body.offset.y,
+                            allowGravity: body.allowGravity,
+                            bounceX: parseFloat(body.bounce.x.toFixed(2)),
+                            bounceY: parseFloat(body.bounce.y.toFixed(2)),
+                            collideWorldBounds: body.collideWorldBounds
+                        };
+                    }
+                    
+                    sceneLayoutData.objects.push(objData);
                 }
-            }
-            
-            // シーンにエクスポート対象のオブジェクトがあれば、最終データに追加
-            if (sceneLayout.objects.length > 0) {
-                fullLayoutData[sceneKey] = sceneLayout;
             }
         }
 
-        // 最終的なJSONデータを整形してコンソールに出力
-        const jsonString = JSON.stringify(fullLayoutData, null, 2);
+        // --- 4. 最終的なJSONデータを整形してコンソールに出力 ---
+        const jsonString = JSON.stringify(sceneLayoutData, null, 2);
         console.log(jsonString);
 
-        // (将来的に) クリップボードへのコピー機能
-        // navigator.clipboard.writeText(jsonString).then(() => {
-        //     console.log('%cLayout JSON copied to clipboard!', 'color: cyan;');
-        // });
+        // クリップボードへのコピー機能（モダンブラウザで利用可能）
+        try {
+            navigator.clipboard.writeText(jsonString).then(() => {
+                console.log('%cLayout JSON for ' + sceneKey + ' copied to clipboard!', 'color: cyan;');
+                alert('Layout JSON for ' + sceneKey + ' copied to clipboard!');
+            });
+        } catch (err) {
+            console.warn('Could not copy to clipboard. Please copy from the console manually.');
+        }
     }
-
      // プラグインが終了する時に呼ばれる
      destroy() {
         // ★★★ 変更点: HTMLパネルの非表示はEditorUIの責任なので、ここからは削除 ★★★
