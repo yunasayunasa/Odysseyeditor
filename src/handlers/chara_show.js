@@ -82,10 +82,10 @@ export function handleCharaShow(manager, params) {
         // ★★★ ここが修正箇所です ★★★
         // ★★★ 第2引数に、GameSceneのインスタンス (manager.scene) を渡します ★★★
         // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+     const editor = manager.scene.plugins.get('EditorPlugin');
         if (editor) {
             editor.makeEditable(chara, manager.scene);
         }
-    }
         // --- 4. アニメーション ---
         const time = Number(params.time) || 0;
 
