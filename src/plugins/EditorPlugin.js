@@ -16,27 +16,15 @@ export default class EditorPlugin extends Phaser.Plugins.BasePlugin {
         this.editorPropsContainer = document.getElementById('editor-props');
     }
 
-      init() {
+     init() {
         console.log('[EditorPlugin] Initialized.');
         if (this.editorPanel) {
             this.editorPanel.style.display = 'block';
         }
         
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-        // ★★★ ここが修正箇所です ★★★
-        // ★★★ グローバルな 'game.input' ではなく、      ★★★
-        // ★★★ シーンの 'input.keyboard' を使います     ★★★
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-        // ゲーム起動時にアクティブになっている任意のシーン（通常はPreloadSceneやSystemScene）
-        // のキーボードマネージャーを借りて、Pキーのリスナーを登録します。
-        // this.scene はプラグイン内では使えないため、pluginManager経由でアクセスします。
-        const sceneForKeyboard = this.pluginManager.game.scene.scenes[0]; // 最初に起動したシーンを借りる
-        if (sceneForKeyboard) {
-            sceneForKeyboard.input.keyboard.on('keydown-P', this.exportLayoutToJson, this);
-        } else {
-            console.error('[EditorPlugin] Could not find an active scene to attach keyboard listener.');
-        }
+        // ★★★ 不安定なキーボードリスナーの登録処理を完全に削除 ★★★
     }
+    
 
      /**
      * @param {Phaser.GameObjects.GameObject} gameObject
@@ -152,7 +140,29 @@ gameObject.y = Math.round(dragY);
             row.appendChild(input);
             this.editorPropsContainer.appendChild(row);
         }
+   // --- 区切り線 ---
+        const separator = document.createElement('hr');
+        separator.style.borderColor = '#555';
+        this.editorPropsContainer.appendChild(separator);
 
+        // --- エクスポートボタン ---
+        const exportButton = document.createElement('button');
+        exportButton.innerText = 'Export Layout (to Console)';
+        exportButton.style.width = '100%';
+        exportButton.style.padding = '8px';
+        exportButton.style.backgroundColor = '#4a4';
+        exportButton.style.color = 'white';
+        exportButton.style.border = 'none';
+        exportButton.style.borderRadius = '3px';
+        exportButton.style.cursor = 'pointer';
+
+        // ボタンがクリックされたら、exportLayoutToJsonメソッドを呼び出す
+        exportButton.addEventListener('click', () => {
+            this.exportLayoutToJson();
+        });
+
+        this.editorPropsContainer.appendChild(exportButton);
+    }
     }
 
    /**
@@ -207,12 +217,7 @@ gameObject.y = Math.round(dragY);
      // プラグインが終了する時に呼ばれる
     destroy() {
         // ★★★ 修正箇所: リスナーを解除する際も、同じシーンから解除する ★★★
-        const sceneForKeyboard = this.pluginManager.game.scene.scenes[0];
-         if (sceneForKeyboard) {
-            sceneForKeyboard.input.keyboard.off('keydown-P', this.exportLayoutToJson, this);
-        }
-
-        if (this.editorPanel) {
+           if (this.editorPanel) {
             this.editorPanel.style.display = 'none';
         }
         super.destroy();
