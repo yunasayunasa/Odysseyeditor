@@ -67,7 +67,7 @@ export default class PreloadScene extends Phaser.Scene {
         // --- 全てのアセットのロード完了後の処理を定義 ---
         this.load.once('complete', () => {
             console.log("PreloadScene: 全アセットロード完了。");
-            
+                  const assetDefine = this.cache.json.get('asset_define');
             // キャラクター定義の生成
             const charaDefs = {};
             for (const key in assetDefine.images) {
@@ -79,25 +79,51 @@ export default class PreloadScene extends Phaser.Scene {
                 }
             }
 
-             // 1. グローバルなアセットリストを作成
-        const assetList = [];
-        
-        // キャッシュに読み込まれた全アセットの情報をループで確認
-        for (const key in ASSET_DEFINE) {
-            const asset = ASSET_DEFINE[key];
-            
-            // アセットリストに、必要な情報だけを抽出して追加
-            assetList.push({
-                key: key,       // アセットキー (e.g., 'yuko_smile')
-                type: asset.type, // アセットの種類 (e.g., 'image')
-                path: asset.path  // ファイルのパス
-            });
-        }
+    // 1. グローバルなアセットリストを作成
+            const assetList = [];
 
-        // 2. 作成したアセットリストを、ゲーム全体のレジストリに登録
-        this.registry.set('asset_list', assetList);
-        console.log(`[PreloadScene] ${assetList.length}個のアセット情報をレジストリに登録しました。`);
+            // --- 画像アセットの情報をリストに追加 ---
+            for (const key in assetDefine.images) {
+                assetList.push({
+                    key: key,
+                    type: 'image',
+                    path: assetDefine.images[key]
+                });
+            }
+
+            // --- 音声アセットの情報をリストに追加 ---
+            for (const key in assetDefine.sounds) {
+                assetList.push({
+                    key: key,
+                    type: 'sound',
+                    path: assetDefine.sounds[key]
+                });
+            }
+            
+            // --- 動画アセットの情報をリストに追加 ---
+            for (const key in assetDefine.videos) {
+                assetList.push({
+                    key: key,
+                    type: 'video',
+                    path: assetDefine.videos[key]
+                });
+            }
+            
+            // --- シナリオアセットの情報をリストに追加 ---
+             for (const key in assetDefine.scenarios) {
+                assetList.push({
+                    key: key,
+                    type: 'scenario',
+                    path: assetDefine.scenarios[key]
+                });
+            }
+
+
+            // 2. 作成したアセットリストを、ゲーム全体のレジストリに登録
+            this.registry.set('asset_list', assetList);
+            console.log(`[PreloadScene] ${assetList.length}個のアセット情報をレジストリに登録しました。`);
         
+            
             
             // SystemSceneを起動し、そのCREATEイベントを待ってから依存関係を解決する
               this.scene.launch('SystemScene', { initialGameData: {
