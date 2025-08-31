@@ -1,21 +1,24 @@
-// src/plugins/EditorPlugin.js (スリム化版)
+// src/plugins/EditorPlugin.js (真のスリム化・完成版)
 
 export default class EditorPlugin extends Phaser.Plugins.BasePlugin {
     constructor(pluginManager) {
         super(pluginManager);
         this.selectedObject = null;
         this.editableObjects = new Map();
-        // HTML要素への参照は全て削除
+
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        // ★★★ これがエラーの原因でした。以下の3行を復活させます。 ★★★
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        this.editorPanel = document.getElementById('editor-panel');
+        this.editorTitle = document.getElementById('editor-title');
+        this.editorPropsContainer = document.getElementById('editor-props');
     }
 
     init() {
         console.log('[EditorPlugin] Initialized.');
-        // UIの初期化はEditorUIが行うので、ここでは何もしない
     }
 
-
-     
-     /**
+    /**
      * @param {Phaser.GameObjects.GameObject} gameObject
      * @param {Phaser.Scene} scene
      */
@@ -25,61 +28,43 @@ export default class EditorPlugin extends Phaser.Plugins.BasePlugin {
         gameObject.setInteractive();
         scene.input.setDraggable(gameObject);
 
-        // ★★★ 変更点2: オブジェクトを管理リストに登録 ★★★
         const sceneKey = scene.scene.key;
         if (!this.editableObjects.has(sceneKey)) {
             this.editableObjects.set(sceneKey, new Set());
         }
         this.editableObjects.get(sceneKey).add(gameObject);
-        scene.input.setDraggable(gameObject);
 
-        // --- オブジェクトに個別のイベントリスナーを設定 (ここから下は変更なし) ---
-      gameObject.on('pointerdown', (pointer) => {
-        // ドラッグ操作かどうかを待つ必要はない。
-        // クリックされた瞬間に、まずオブジェクトを選択状態にする。
-        this.selectedObject = gameObject;
-        
-        // そして、即座にプロパティパネルを更新する！
-        this.updatePropertyPanel();
-    });
+        gameObject.on('pointerdown', () => {
+            this.selectedObject = gameObject;
+            this.updatePropertyPanel();
+        });
 
-    // 2. オブジェクトのドラッグが開始された瞬間のイベント
-    // (このイベントリスナーは、以前のままでも良いですが、
-    //  クリック処理からisDraggingフラグが消えたので、ここもシンプルにします)
-    //  このリスナー自体が不要になる場合もありますが、念のため残します。
-    gameObject.on('dragstart', (pointer) => {
-        // ドラッグが開始されたことを示すログ（デバッグ用）
-         console.log('Drag started on:', gameObject.name);
-    });
+        gameObject.on('dragstart', () => {
+            // 必要に応じてドラッグ開始時の処理を追加
+        });
         
         gameObject.on('drag', (pointer, dragX, dragY) => {
             gameObject.x = Math.round(dragX);
-gameObject.y = Math.round(dragY);
+            gameObject.y = Math.round(dragY);
             if(this.selectedObject === gameObject) this.updatePropertyPanel();
         });
+
         gameObject.on('pointerover', () => gameObject.setTint(0x00ff00));
         gameObject.on('pointerout', () => gameObject.clearTint());
         gameObject.setData('isEditable', true);
-    }
-    /**
-     * シーンの何もない場所がクリックされた時に、選択を解除するためのメソッド
-     * このメソッドは、各シーンの 'pointerdown' イベントから呼び出される
-     */
-    onScenePointerDown() {
-        this.selectedObject = null;
-        this.updatePropertyPanel();
     }
 
     /**
      * プロパティ編集パネルの表示を更新する
      */
     updatePropertyPanel() {
+        // このメソッドは、復活させたプロパティのおかげで正しく動作します
         if (!this.editorPanel || !this.editorPropsContainer || !this.editorTitle) return;
         
         this.editorPropsContainer.innerHTML = '';
         
         if (!this.selectedObject) {
-            this.editorTitle.innerText = 'No Object Selected';
+            // オブジェクトが選択されていない場合、パネルは非表示にする
             this.editorPanel.style.visibility = 'hidden'; 
             return;
         }
@@ -204,10 +189,8 @@ gameObject.y = Math.round(dragY);
     }
 
      // プラグインが終了する時に呼ばれる
-    destroy() {
-        // ★★★ 修正箇所: リスナーを解除する際も、同じシーンから解除する ★★★
-           if (this.editorPanel) {
-            this.editorPanel.style.display = 'none';
-        }
+     destroy() {
+        // ★★★ 変更点: HTMLパネルの非表示はEditorUIの責任なので、ここからは削除 ★★★
         super.destroy();
-    }  }
+    }
+}
