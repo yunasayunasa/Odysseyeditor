@@ -15,65 +15,127 @@ export default class EditorPlugin extends Phaser.Plugins.BasePlugin {
         // ★★★ 変更点1: アセット・ブラウザのHTML要素もここで取得しておく ★★★
         this.assetBrowserPanel = document.getElementById('asset-browser');
         this.assetListContainer = document.getElementById('asset-list');
+         this.assetBrowserToggleBtn = document.getElementById('toggle-asset-browser');
     }
 
-    init() {
+init() {
         console.log('[EditorPlugin] Initialized.');
-        
-        // プロパティパネルを表示
-        if (this.editorPanel) {
-            this.editorPanel.style.display = 'block';
-        }
-        
-        // ★★★ 変更点2: アセット・ブラウザを表示し、中身を構築する ★★★
-        if (this.assetBrowserPanel && this.assetListContainer) {
-            this.assetBrowserPanel.style.display = 'block'; // 非表示だったパネルを表示する
-            
-            // --- レジストリからアセットリストを取得 ---
-            const assetList = this.pluginManager.game.registry.get('asset_list');
-            if (!assetList) {
-                console.warn('[EditorPlugin] Asset list not found in registry.');
-                return;
-            }
 
-            // --- アセットリストに基づいてHTML要素を生成 ---
-            // まずは中身を空にする
-            this.assetListContainer.innerHTML = '';
-            
-            // 画像アセットのみをフィルタリング
-            const imageAssets = assetList.filter(asset => asset.type === 'image');
+        // ★★★ 変更点1: パネルの初期化処理をヘルパーメソッドに分離 ★★★
+        this.initPanel(this.editorPanel, '#editor-title');
+        this.initPanel(this.assetBrowserPanel, '#asset-browser-title');
 
-            for (const asset of imageAssets) {
-                // 1. 各アセットアイテムの外側のコンテナ(div)を作る
-                const itemDiv = document.createElement('div');
-                itemDiv.className = 'asset-item';
-                // HTMLのデータ属性として、アセットキーとパスを埋め込んでおく
-                itemDiv.dataset.assetKey = asset.key;
-                itemDiv.dataset.assetPath = asset.path;
-                
-                // 2. プレビュー画像(img)を作る
-                const previewImg = document.createElement('img');
-                previewImg.className = 'asset-preview';
-                previewImg.src = asset.path; // 画像のパスをsrcに設定
-                
-                // 3. アセットキー(span)を作る
-                const keySpan = document.createElement('span');
-                keySpan.className = 'asset-key';
-                keySpan.innerText = asset.key;
-                
-                // 4. コンテナに画像とキーを追加
-                itemDiv.appendChild(previewImg);
-                itemDiv.appendChild(keySpan);
-                
-                // 5. 最終的に、リスト全体にこのアイテムを追加
-                this.assetListContainer.appendChild(itemDiv);
-            }
+        // ★★★ 変更点2: アセット・ブラウザの表示処理を修正 ★★★
+        if (this.assetBrowserPanel) {
+            this.assetBrowserPanel.style.display = 'none'; // 初期状態は非表示
+            this.assetBrowserToggleBtn.style.display = 'block'; // トグルボタンを表示
+
+            this.assetBrowserToggleBtn.addEventListener('click', () => {
+                const isHidden = this.assetBrowserPanel.style.display === 'none';
+                this.assetBrowserPanel.style.display = isHidden ? 'block' : 'none';
+            });
             
-            console.log(`[EditorPlugin] Asset Browser populated with ${imageAssets.length} image assets.`);
+            this.populateAssetBrowser(); // アセット一覧の生成
         }
     }
- 
-    
+ /**
+     * ★★★ 新規メソッド: パネルをドラッグ移動可能にする ★★★
+     * @param {HTMLElement} panel - 対象のパネル要素
+     * @param {string} headerSelector - ドラッグハンドルとなるヘッダーのCSSセレクタ
+     */
+    initPanel(panel, headerSelector) {
+        if (!panel) return;
+        panel.style.display = 'block'; // まず表示
+
+        const header = panel.querySelector(headerSelector);
+        if (!header) return;
+
+        let isDragging = false;
+        let offsetX, offsetY;
+
+        header.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            // パネルの左上角とマウスカーソルの差分を計算
+            offsetX = e.clientX - panel.offsetLeft;
+            offsetY = e.clientY - panel.offsetTop;
+            // ドラッグ中のマウスイベントをウィンドウ全体でリッスン
+            window.addEventListener('mousemove', onMouseMove);
+            window.addEventListener('mouseup', onMouseUp);
+        });
+
+        const onMouseMove = (e) => {
+            if (isDragging) {
+                // マウスの現在位置から差分を引いて、パネルの新しい左上座標を計算
+                panel.style.left = `${e.clientX - offsetX}px`;
+                panel.style.top = `${e.clientY - offsetY}px`;
+                // CSSで指定していたrightを無効化
+                panel.style.right = 'auto'; 
+            }
+        };
+
+        const onMouseUp = () => {
+            isDragging = false;
+            // ドラッグ終了後、不要になったリスナーを解除
+            window.removeEventListener('mousemove', onMouseMove);
+            window.removeEventListener('mouseup', onMouseUp);
+        };
+    }
+
+        /**
+     * アセット・ブラウザの中身（アセットリスト）を動的に生成する
+     */
+    populateAssetBrowser() {
+        // アセットリストを表示するコンテナ要素がなければ、処理を中断
+        if (!this.assetListContainer) {
+            console.error('[EditorPlugin] Asset list container element not found.');
+            return;
+        }
+        
+        // Phaserのレジストリから、PreloadSceneで登録したアセットリストを取得
+        const assetList = this.pluginManager.game.registry.get('asset_list');
+        if (!assetList) {
+            console.warn('[EditorPlugin] Asset list not found in registry.');
+            return;
+        }
+        
+        // 新しくリストを生成する前に、古い内容を一度すべてクリアする
+        this.assetListContainer.innerHTML = '';
+        
+        // アセットリストの中から、'image'タイプのものだけをフィルタリングして取り出す
+        const imageAssets = assetList.filter(asset => asset.type === 'image');
+
+        // 取り出した画像アセットの情報を元に、ループでHTML要素を生成していく
+        for (const asset of imageAssets) {
+            // 1. 各アセットアイテムを包む外側の <div> を作る
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'asset-item';
+            
+            // ★重要★ 次のステップ（ドラッグ＆ドロップ）で使うための情報を、
+            // HTMLのデータ属性として埋め込んでおく
+            itemDiv.dataset.assetKey = asset.key;
+            itemDiv.dataset.assetPath = asset.path;
+            
+            // 2. プレビュー画像を表示するための <img> タグを作る
+            const previewImg = document.createElement('img');
+            previewImg.className = 'asset-preview';
+            previewImg.src = asset.path; // 画像ファイルのパスをsrc属性に設定
+            previewImg.alt = asset.key;  // 画像が表示されなかった時用の代替テキスト
+            
+            // 3. アセットキー（ファイル名）を表示するための <span> タグを作る
+            const keySpan = document.createElement('span');
+            keySpan.className = 'asset-key';
+            keySpan.innerText = asset.key;
+            
+            // 4. 組み立て：外側の<div>に、<img>と<span>を追加する
+            itemDiv.appendChild(previewImg);
+            itemDiv.appendChild(keySpan);
+            
+            // 5. 完成したアセットアイテムのHTML要素を、リスト全体に追加する
+            this.assetListContainer.appendChild(itemDiv);
+        }
+        
+        console.log(`[EditorPlugin] Asset Browser populated with ${imageAssets.length} image assets.`);
+    }
 
      /**
      * @param {Phaser.GameObjects.GameObject} gameObject
