@@ -118,7 +118,7 @@ export default class UIScene extends Phaser.Scene {
         editor.makeEditable(this.enemyHpBar, this);
         editor.makeEditable(this.menuButton, this);
     }
-    }
+    
     
     // ★★★ 背景クリックで選択解除 ★★★
     this.input.on('pointerdown', (pointer) => {
