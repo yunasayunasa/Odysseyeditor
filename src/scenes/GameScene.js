@@ -14,10 +14,15 @@ export default class GameScene extends BaseGameScene {
         this.pendingChoices = [];
     }
 
-    init(data) {
-        this.charaDefs = data.initialGameData.charaDefs; // SystemSceneからのデータ構造に合わせる
-        this.startScenario = data.initialGameData.startScenario || 'test.ks';
-        // ... (他のinit処理)
+        init(data) {
+        console.log("[GameScene] Initializing with data:", data);
+        
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        // ★★★ これがあなたのSystemSceneに基づいた正しいコードです ★★★
+        // ★★★ 'data'オブジェクトから直接プロパティを取得します ★★★
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        this.charaDefs = data.charaDefs;
+        this.startScenario = data.startScenario || 'test.ks';
         this.startLabel = data.startLabel || null;
         this.isResuming = data.resumedFrom ? true : false;
         this.returnParams = data.returnParams || null;
