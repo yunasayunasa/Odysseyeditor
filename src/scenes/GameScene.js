@@ -82,14 +82,25 @@ export default class GameScene extends Phaser.Scene { // ★ Phaser.Scene を直
             console.warn(`[${sceneKey}] No layout data found.`);
         }
 
-        // --- 3. シーンの全てのオブジェクトを編集可能にする ---
-        // (レイヤーの中身も含めて、全てを登録する)
+         // --- 3. シーンの全ての「レイヤーの中身」を編集可能にする ---
         const editor = this.plugins.get('EditorPlugin');
         if (editor) {
+            // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+            // ★★★ これが全てを解決する、最後の修正です ★★★
+            // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+            
+            // シーンのルート(children.list)ではなく、
+            // 各レイヤーコンテナの中身(layer.background.listなど)をループさせる
             for (const layerName in this.layer) {
-                this.layer[layerName].list.forEach(child => {
-                    editor.makeEditable(child, this);
-                });
+                const container = this.layer[layerName];
+                if (container && container.list) {
+                    container.list.forEach(child => {
+                        // オブジェクトに名前がなければ、編集対象にしない
+                        if (child.name) {
+                            editor.makeEditable(child, this);
+                        }
+                    });
+                }
             }
         }
         
@@ -107,6 +118,7 @@ export default class GameScene extends Phaser.Scene { // ★ Phaser.Scene を直
         this.events.emit('scene-ready');
         console.log(`[GameScene] Setup complete. Scene is ready.`);
     }
+
      /**
      * BaseGameSceneのfinalizeSetupから呼び出される、このシーン専用の最終処理
      */
