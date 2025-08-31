@@ -55,7 +55,13 @@ export default class PreloadScene extends Phaser.Scene {
         for (const key in assetDefine.sounds) { this.load.audio(key, assetDefine.sounds[key]); }
         for (const key in assetDefine.videos) { this.load.video(key, assetDefine.videos[key]); }
         for (const key in assetDefine.scenarios) { this.load.text(key, assetDefine.scenarios[key]); }
-        
+        if (assetDefine.scenes) {
+            for (const sceneKey in assetDefine.scenes) {
+                const filePath = assetDefine.scenes[sceneKey];
+                this.load.json(sceneKey, filePath);
+                console.log(`[PreloadScene] Queued scene data: ${sceneKey} from ${filePath}`);
+            }
+        }
         // ゲームで使う可能性のあるシナリオファイルをすべてロード
         this.load.text('scene1.ks', 'assets/scene1.ks');
         this.load.text('scene2.ks', 'assets/scene2.ks');

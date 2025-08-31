@@ -22,7 +22,9 @@
 "ronpa_bgm": "assets/ronpa_bgm.mp3"
 
   },
-  "videos": {
-    "opening": "assets/opening.mp4"
-  }
+ "scenes": {
+        "GameScene": "assets/data/scenes/GameScene.json",
+        "UIScene": "assets/data/scenes/UIScene.json",
+        "JumpScene": "assets/data/scenes/JumpScene.json"
+    }
   }

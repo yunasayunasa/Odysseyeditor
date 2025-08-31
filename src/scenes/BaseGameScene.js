@@ -5,41 +5,29 @@ export default class BaseGameScene extends Phaser.Scene {
      /**
      * 汎用初期化ルーチン（async/await版）
      */
-    async applyLayoutAndPhysics() {
+   applyLayoutAndPhysics() {
         const sceneKey = this.scene.key;
-        const layoutPath = `assets/data/scenes/${sceneKey}.json`;
 
-        // 1. JSONがキャッシュに存在するかチェック
-        if (!this.cache.json.has(sceneKey)) {
-            // 2. 存在しなければ、ロード処理が終わるのを「待つ(await)」
-            console.log(`[${sceneKey}] Loading layout file: ${layoutPath}`);
-            
-            // Promiseを使って、ロード完了を待機可能な非同期処理に変換
-            await new Promise(resolve => {
-                this.load.json(sceneKey, layoutPath);
-                this.load.once(`filecomplete-json-${sceneKey}`, resolve);
-                this.load.start();
-            });
-            console.log(`[${sceneKey}] Layout file loaded.`);
-        } else {
-            console.log(`[${sceneKey}] Layout data found in cache.`);
-        }
-
-        // 3. 確実にデータが存在する状態で、構築処理を呼び出す
-        this.buildSceneFromLayout(sceneKey);
+        // ★★★ 変更点: ロード処理を完全に削除 ★★★
+        // データはPreloadSceneでロード済みなので、直接キャッシュから取得する
+        const layoutData = this.cache.json.get(sceneKey);
+        
+        // buildSceneFromLayoutを即座に呼び出す
+        this.buildSceneFromLayout(layoutData);
     }
 
 
     /**
      * 読み込み済みのレイアウトデータを使って、シーンを構築する
      */
-    buildSceneFromLayout(sceneKey) {
-        const layoutData = this.cache.json.get(sceneKey);
+     buildSceneFromLayout(layoutData) { // ★ 引数が sceneKey から layoutData に変更
+        const sceneKey = this.scene.key;
         if (!layoutData || !layoutData.objects) {
-            console.warn(`[${sceneKey}] No layout data found in ${sceneKey}.json. Finalizing setup.`);
-            this.finalizeSetup(); // データがなくても最終セットアップは必ず呼ぶ
+            console.warn(`[${sceneKey}] No layout data found for this scene. Finalizing setup.`);
+            this.finalizeSetup();
             return;
         }
+
 
         console.log(`[${sceneKey}] Building scene from layout data...`);
         
