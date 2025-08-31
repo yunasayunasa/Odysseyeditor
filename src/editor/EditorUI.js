@@ -65,53 +65,76 @@ export default class EditorUI {
             }
         });
 
-          const gameCanvas = this.game.canvas;
-
-      // --- 1. dragenter: ドラッグ要素がキャンバス領域に「入った」瞬間のイベント ---
-        // ここで preventDefault を呼ぶのが最も確実
-        gameCanvas.addEventListener('dragenter', (event) => {
-            event.preventDefault();
-        });
-
-        // --- 2. dragover: ドラッグ要素がキャンバス領域の上を「移動中」のイベント ---
-        // こちらでも preventDefault を呼んでおくことで、より確実になる
-        gameCanvas.addEventListener('dragover', (event) => {
-            event.preventDefault();
-        });
-        
-        // --- 3. drop: ドラッグ要素がキャンバス上で「離された」瞬間のイベント ---
+      const gameCanvas = this.game.canvas;
         gameCanvas.addEventListener('drop', (event) => {
-            event.preventDefault(); // 念のためここでも呼ぶ
+            event.preventDefault();
 
+            // --- ログ爆弾フェーズ1: イベントとデータの確認 ---
+            console.log("💣💥 LOG BOMB V2 - PHASE 1: Drop event fired!");
             const assetKey = event.dataTransfer.getData('text/plain');
-            if (!assetKey) return;
-
+            if (!assetKey) {
+                console.error("💣💥 BOMB DEFUSED: No assetKey found.");
+                return;
+            }
+            console.log(`💣 Asset Key: '${assetKey}'`);
             const pointer = this.game.input.activePointer;
+            console.log(`💣 Pointer Screen Coords: x=${pointer.x}, y=${pointer.y}`);
+
+            // --- ログ爆弾フェーズ2: ターゲットシーンの特定 ---
+            console.log("💣💥 LOG BOMB V2 - PHASE 2: Searching for target scene...");
             const scenes = this.game.scene.getScenes(true);
             let targetScene = null;
-
             for (let i = scenes.length - 1; i >= 0; i--) {
                 const scene = scenes[i];
-                // マウスカーソルがカメラの表示領域内にあるか、より単純な方法でチェック
-                if (scene.cameras.main.worldView.contains(pointer.x, pointer.y) && scene.scene.key !== 'UIScene') {
+                const contains = scene.cameras.main.worldView.contains(pointer.x, pointer.y);
+                console.log(`💣 Checking scene '${scene.scene.key}'... Pointer inside camera view: ${contains}`);
+                if (contains && scene.scene.key !== 'UIScene') {
                     targetScene = scene;
+                    console.log(`💣💥 Target Scene Found: '${targetScene.scene.key}'`);
                     break;
                 }
             }
-
-            if (targetScene) {
-                const newImage = new Phaser.GameObjects.Image(targetScene, pointer.worldX, pointer.worldY, assetKey);
-                
-                if (targetScene.scene.key === 'GameScene' && targetScene.layer && targetScene.layer.character) {
-                    targetScene.layer.character.add(newImage);
-                } else {
-                    targetScene.add.existing(newImage);
-                }
-                
-                newImage.name = `${assetKey}_${Date.now()}`;
-                this.plugin.makeEditable(newImage, targetScene);
+            if (!targetScene) {
+                console.error("💣💥 BOMB DEFUSED: No suitable target scene found.");
+                return;
             }
+
+            // --- ログ爆弾フェーズ3: オブジェクトの生成とプロパティの徹底調査 ---
+            console.log("💣💥 LOG BOMB V2 - PHASE 3: Creating GameObject...");
+            // ★★★ add.image を使って、生成と追加を同時に行い、Phaserに任せる ★★★
+            const newImage = targetScene.add.image(pointer.worldX, pointer.worldY, assetKey);
+            
+            console.log("--- 💣 OBJECT PROPERTY INSPECTION 💣 ---");
+            console.log(`  - Is object created?`, !!newImage);
+            console.log(`  - Name (before set):`, newImage.name);
+            console.log(`  - Texture Key:`, newImage.texture.key);
+            console.log(`  - Position (world): x=${newImage.x}, y=${newImage.y}`);
+            console.log(`  - Scale: x=${newImage.scaleX}, y=${newImage.scaleY}`);
+            console.log(`  - Alpha:`, newImage.alpha);
+            console.log(`  - Visible:`, newImage.visible);
+            console.log(`  - Depth:`, newImage.depth);
+            console.log(`  - Parent Container (before move):`, newImage.parentContainer || 'None (Scene Root)');
+            console.log("-----------------------------------------");
+            
+            newImage.name = `${assetKey}_${Date.now()}`;
+
+            // --- ログ爆弾フェーズ4: レイヤーへの追加と状態変化の追跡 ---
+            console.log("💣💥 LOG BOMB V2 - PHASE 4: Adding to layer...");
+            if (targetScene.scene.key === 'GameScene' && targetScene.layer && targetScene.layer.character) {
+                targetScene.layer.character.add(newImage);
+                console.log(`💣 Object moved to 'character' layer.`);
+                console.log("--- 💣 OBJECT PROPERTY INSPECTION (AFTER MOVE) 💣 ---");
+                console.log(`  - Parent Container (after move):`, newImage.parentContainer ? newImage.parentContainer.name || 'Unnamed Container' : 'None');
+                console.log(`  - Final Depth:`, newImage.depth);
+                console.log(`  - Character layer's total objects:`, targetScene.layer.character.list.length);
+                console.log("-----------------------------------------");
+            }
+            
+            // --- ログ爆弾フェーズ5: エディタ登録 ---
+            console.log("💣💥 LOG BOMB V2 - PHASE 5: Making editable...");
+            this.plugin.makeEditable(newImage, targetScene);
+
+            console.log("💣💥 BOMB SEQUENCE COMPLETE. If you see this, the code ran without errors.");
         });
     }
-    // ★★★ 変更点2: 不要になった initPanelDrag と initAssetBrowserToggle メソッドを完全に削除 ★★★
 }
