@@ -65,61 +65,79 @@ export default class EditorUI {
             }
         });
 
-         const gameCanvas = this.game.canvas;
+           const gameCanvas = this.game.canvas;
+
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        // ★★★ 「アセットが戻る」問題を解決するリスナーを復活させます ★★★
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        gameCanvas.addEventListener('dragenter', (event) => {
+            event.preventDefault();
+        });
+        gameCanvas.addEventListener('dragover', (event) => {
+            event.preventDefault();
+        });
+        
+        // --- drop イベントリスナーに、ログ爆弾と座標系修正を組み込む ---
         gameCanvas.addEventListener('drop', (event) => {
             event.preventDefault();
 
+            // --- ログ爆弾フェーズ1: イベントと座標系の確認 ---
+            console.log("💣💥 LOG BOMB FINAL - PHASE 1: Drop event fired!");
             const assetKey = event.dataTransfer.getData('text/plain');
-            if (!assetKey) return;
-            
-            // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-            // ★★★ ここからが座標系を修正する核心部です ★★★
-            // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+            if (!assetKey) {
+                console.error("💣💥 BOMB DEFUSED: No assetKey found.");
+                return;
+            }
+            console.log(`💣 Asset Key: '${assetKey}'`);
 
-            // 1. ゲームキャンバスの、ブラウザ上での位置とサイズを取得
             const canvasBounds = gameCanvas.getBoundingClientRect();
-
-            // 2. ブラウザのクリック座標から、キャンバスの相対座標を計算
             const localX = event.clientX - canvasBounds.left;
             const localY = event.clientY - canvasBounds.top;
             
-            // 3. Phaserのポインターの座標を、計算したローカル座標で上書き
-            //    これにより、以降の処理はすべて正しいPhaser座標系で行われる
+            console.log(`💣 Browser Click Coords: clientX=${event.clientX}, clientY=${event.clientY}`);
+            console.log(`💣 Canvas Bounding Rect: left=${canvasBounds.left}, top=${canvasBounds.top}`);
+            console.log(`💣 Calculated Local Coords: localX=${localX}, localY=${localY}`);
+
             const pointer = this.game.input.activePointer;
             pointer.x = localX;
             pointer.y = localY;
             
-            // ★★★ これで座標系のズレが完全に修正されました ★★★
-
-
+            // --- ログ爆弾フェーズ2: ターゲットシーンの特定 ---
+            console.log("💣💥 LOG BOMB FINAL - PHASE 2: Searching for target scene...");
             const scenes = this.game.scene.getScenes(true);
             let targetScene = null;
-            
             for (let i = scenes.length - 1; i >= 0; i--) {
                 const scene = scenes[i];
-                // 正しい座標で判定するので、今度は成功するはず
-                if (scene.cameras.main.worldView.contains(pointer.x, pointer.y) && scene.scene.key !== 'UIScene') {
+                const contains = scene.cameras.main.worldView.contains(pointer.x, pointer.y);
+                console.log(`💣 Checking scene '${scene.scene.key}' with coords (x=${pointer.x}, y=${pointer.y})... Inside camera view: ${contains}`);
+                if (contains && scene.scene.key !== 'UIScene') {
                     targetScene = scene;
+                    console.log(`💣💥 Target Scene Found: '${targetScene.scene.key}'`);
                     break;
                 }
             }
-
-            if (targetScene) {
-                // ... (オブジェクト生成のロジックは、以前のもので完璧です)
-                const newImage = targetScene.add.image(pointer.worldX, pointer.worldY, assetKey);
-                
-                if (targetScene.scene.key === 'GameScene' && targetScene.layer && targetScene.layer.character) {
-                    targetScene.layer.character.add(newImage);
-                } else {
-                    targetScene.add.existing(newImage);
-                }
-                
-                newImage.name = `${assetKey}_${Date.now()}`;
-                this.plugin.makeEditable(newImage, targetScene);
-            } else {
-                // (デバッグ用) ターゲットシーンが見つからなかった場合のログ
-                console.warn("[EditorUI] Drop successful, but no target scene found at calculated coordinates:", { x: localX, y: localY });
+            if (!targetScene) {
+                console.error("💣💥 BOMB DEFUSED: No suitable target scene found at calculated coordinates.");
+                return;
             }
+
+            // --- ログ爆弾フェーズ3: オブジェクトの生成と追加 ---
+            console.log("💣💥 LOG BOMB FINAL - PHASE 3: Creating and adding GameObject...");
+            const newImage = targetScene.add.image(pointer.worldX, pointer.worldY, assetKey);
+            console.log(`💣 Object created. World Coords: x=${pointer.worldX}, y=${pointer.worldY}`);
+            newImage.name = `${assetKey}_${Date.now()}`;
+
+            if (targetScene.scene.key === 'GameScene' && targetScene.layer && targetScene.layer.character) {
+                targetScene.layer.character.add(newImage);
+                console.log(`💣 Object added to GameScene's 'character' layer.`);
+            } else {
+                console.log(`💣 Object added directly to scene '${targetScene.scene.key}'.`);
+            }
+            
+            // --- ログ爆弾フェーズ4: 最終確認 ---
+            console.log("💣💥 LOG BOMB FINAL - PHASE 4: Making editable...");
+            this.plugin.makeEditable(newImage, targetScene);
+            console.log("💣💥 BOMB SEQUENCE COMPLETE. Object should be visible.");
         });
     }
 }
