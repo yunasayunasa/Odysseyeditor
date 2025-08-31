@@ -212,24 +212,183 @@ export default class EditorPlugin extends Phaser.Plugins.BasePlugin {
     }
 
 
+   // src/plugins/EditorPlugin.js
+
+// ... (constructor, init, populateTransformTab などは変更なし)
+
     /**
-     * ★★★ 新規メソッド: Physicsタブの中身を生成する ★★★
+     * Physicsタブの中身を生成する（完全版）
      */
     populatePhysicsTab() {
+        // まずは中身を空にする
+        this.physicsPropsContainer.innerHTML = '';
         const gameObject = this.selectedObject;
-        
-        // オブジェクトが物理ボディを持っているかチェック
-        if (gameObject && gameObject.body) {
-            // ボディを持っている場合:
-            // パラメータ編集用のUIをここに生成していく（次のステップで実装）
-            this.physicsPropsContainer.innerHTML = `<p>Physics properties for ${gameObject.name}.</p>`;
+        if (!gameObject) return;
+
+        // --- 物理ボディを持っているかどうかで表示を切り替える ---
+        if (gameObject.body) {
+            // ★ ケースA: 既に物理ボディを持っている場合
+            this.createPhysicsPropertiesUI(gameObject);
         } else {
-            // ボディを持っていない場合:
-            // 物理ボディを追加するためのボタンを表示する（これも次のステップで）
-            this.physicsPropsContainer.innerHTML = `<p>This object has no physics body.</p>`;
+            // ★ ケースB: まだ物理ボディを持っていない場合
+            this.createEnablePhysicsButton(gameObject);
         }
     }
+
+    /**
+     * ★ 新規メソッド ★
+     * 「Enable Physics」ボタンを生成する
+     * @param {Phaser.GameObjects.GameObject} gameObject 
+     */
+    createEnablePhysicsButton(gameObject) {
+        const button = document.createElement('button');
+        button.innerText = 'Enable Arcade Physics';
+        button.onclick = () => {
+            if (this.selectedObject) {
+                // オブジェクトに物理ボディを追加する
+                this.pluginManager.game.scene.getScene('GameScene').physics.add.existing(this.selectedObject, false); // false = 静的ボディ
+                
+                // 表示を即座に更新する
+                this.updatePropertyPanel();
+            }
+        };
+        this.physicsPropsContainer.appendChild(button);
+    }
+
+    /**
+     * ★ 新規メソッド ★
+     * 物理パラメータを編集するためのUIを生成する
+     * @param {Phaser.GameObjects.GameObject} gameObject 
+     */
+    createPhysicsPropertiesUI(gameObject) {
+        const body = gameObject.body;
+        
+        // --- ボディサイズの編集 ---
+        this.createVector2Input(this.physicsPropsContainer, 'Size', body.setSize.bind(body), { x: body.width, y: body.height });
+        this.createVector2Input(this.physicsPropsContainer, 'Offset', body.setOffset.bind(body), { x: body.offset.x, y: body.offset.y });
+
+        // --- 真偽値プロパティの編集 (チェックボックス) ---
+        this.createCheckbox(this.physicsPropsContainer, 'Immovable', body.immovable, (value) => body.setImmovable(value));
+        this.createCheckbox(this.physicsPropsContainer, 'Allow Gravity', body.allowGravity, (value) => body.setAllowGravity(value));
+        this.createCheckbox(this.physicsPropsContainer, 'Collide World Bounds', body.collideWorldBounds, (value) => body.setCollideWorldBounds(value));
+
+        // --- 数値プロパティの編集 (スライダー) ---
+        this.createRangeInput(this.physicsPropsContainer, 'Bounce X', body.bounce.x, 0, 1, 0.01, (value) => body.bounce.x = value);
+        this.createRangeInput(this.physicsPropsContainer, 'Bounce Y', body.bounce.y, 0, 1, 0.01, (value) => body.bounce.y = value);
+
+        // --- ボディを削除するボタン ---
+        const removeButton = document.createElement('button');
+        removeButton.innerText = 'Disable Physics';
+        removeButton.style.backgroundColor = '#c44';
+        removeButton.onclick = () => {
+            if (this.selectedObject) {
+                this.pluginManager.game.scene.getScene('GameScene').physics.world.disable(this.selectedObject);
+                // 表示を即座に更新する
+                this.updatePropertyPanel();
+            }
+        };
+        this.physicsPropsContainer.appendChild(removeButton);
+    }
     
+    // --- 以下、UI生成のためのヘルパーメソッド群 ---
+// src/plugins/EditorPlugin.js の末尾に追加
+
+    // --- UI生成ヘルパーメソッド群 ---
+
+    /**
+     * XとYの2つの数値入力を持つUIパーツを生成する
+     * @param {HTMLElement} container - 追加先のHTML要素
+     * @param {string} label - 表示ラベル
+     * @param {function} callback - 値が変更された時に呼び出される関数 (x, y を引数に取る)
+     * @param {{x: number, y: number}} initialValue - 初期値
+     */
+    createVector2Input(container, label, callback, initialValue) {
+        const row = document.createElement('div');
+        const labelEl = document.createElement('label');
+        labelEl.innerText = `${label}:`;
+        labelEl.style.width = '100px';
+
+        const inputX = document.createElement('input');
+        inputX.type = 'number';
+        inputX.value = initialValue.x.toFixed(2);
+        inputX.style.width = '60px';
+        inputX.addEventListener('input', () => callback(parseFloat(inputX.value), parseFloat(inputY.value)));
+
+        const inputY = document.createElement('input');
+        inputY.type = 'number';
+        inputY.value = initialValue.y.toFixed(2);
+        inputY.style.width = '60px';
+        inputY.addEventListener('input', () => callback(parseFloat(inputX.value), parseFloat(inputY.value)));
+
+        row.appendChild(labelEl);
+        row.appendChild(document.createTextNode(' X: '));
+        row.appendChild(inputX);
+        row.appendChild(document.createTextNode(' Y: '));
+        row.appendChild(inputY);
+        container.appendChild(row);
+    }
+
+    /**
+     * チェックボックスのUIパーツを生成する
+     * @param {HTMLElement} container - 追加先のHTML要素
+     * @param {string} label - 表示ラベル
+     * @param {boolean} initialValue - 初期値 (true/false)
+     * @param {function} callback - 値が変更された時に呼び出される関数 (boolean を引数に取る)
+     */
+    createCheckbox(container, label, initialValue, callback) {
+        const row = document.createElement('div');
+        const labelEl = document.createElement('label');
+        labelEl.innerText = label;
+        labelEl.style.width = '160px';
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = initialValue;
+        checkbox.addEventListener('change', () => callback(checkbox.checked));
+
+        row.appendChild(labelEl);
+        row.appendChild(checkbox);
+        container.appendChild(row);
+    }
+
+    /**
+     * レンジスライダーのUIパーツを生成する
+     * @param {HTMLElement} container - 追加先のHTML要素
+     * @param {string} label - 表示ラベル
+     * @param {number} initialValue - 初期値
+     * @param {number} min - 最小値
+     * @param {number} max - 最大値
+     * @param {number} step - 刻み幅
+     * @param {function} callback - 値が変更された時に呼び出される関数 (number を引数に取る)
+     */
+    createRangeInput(container, label, initialValue, min, max, step, callback) {
+        const row = document.createElement('div');
+        const labelEl = document.createElement('label');
+        labelEl.innerText = label;
+        labelEl.style.width = '100px';
+
+        const slider = document.createElement('input');
+        slider.type = 'range';
+        slider.min = min;
+        slider.max = max;
+        slider.step = step;
+        slider.value = initialValue;
+        slider.style.width = '120px';
+        
+        const valueEl = document.createElement('span');
+        valueEl.innerText = initialValue.toFixed(2);
+
+        slider.addEventListener('input', () => {
+            const value = parseFloat(slider.value);
+            valueEl.innerText = value.toFixed(2);
+            callback(value);
+        });
+
+        row.appendChild(labelEl);
+        row.appendChild(slider);
+        row.appendChild(valueEl);
+        container.appendChild(row);
+    }
 
    /**
      * ★★★ 変更点3: exportLayoutToJsonメソッドを完全に書き換える ★★★
