@@ -33,119 +33,28 @@ export default class JumpScene extends BaseGameScene { // ★ 継承元を変更
      * シーンが作成される時のメイン処理
      */
     create() {
-        // --- 1. シーン固有の初期化 ---
         console.log("[JumpScene] Create started.");
-        this.applyLayoutAndPhysics();
-        // カメラの背景色を設定
         this.cameras.main.setBackgroundColor('#4488cc');
-        
-        // プレイヤー操作のためのカーソルキーを準備
         this.cursors = this.input.keyboard.createCursorKeys();
-
-        // --- 2. 汎用初期化ルーチンによるレイアウト適用 ---
-        const sceneKey = this.scene.key; // 'JumpScene'
-        const layoutFilePath = `assets/data/scenes/${sceneKey}.json`;
-
-        // 対応するJSONファイルの存在をチェック
-        if (this.cache.json.has(sceneKey)) {
-             // 既にロード済みなら、即座に適用
-             this.applyLayoutAndPhysics(sceneKey);
-        } else {
-            // まだロードされていなければ、ロードしてから適用
-            this.load.json(sceneKey, layoutFilePath);
-            this.load.once(`filecomplete-json-${sceneKey}`, () => {
-                this.applyLayoutAndPhysics(sceneKey);
-            });
-            this.load.start();
-        }
         
-        // ★★★ 開発の5ヶ条: 第2条 - BGMはcreateで再生 ★★★
-        const soundManager = this.registry.get('soundManager');
-        soundManager.playBgm('bgm_action'); // 仮のBGMキー
+        // ★★★ 親の汎用ルーチンを呼び出すだけ！ ★★★
+        this.applyLayoutAndPhysics();
     }
-  /**
+/**
      * JumpScene専用の最終セットアップ
      */
     finalizeSetup() {
-        // playerへの参照を保持
+        // playerへの参照を保持 (applyProperties は親がやってくれるので、ここでは参照を取るだけ)
         this.player = this.children.list.find(obj => obj.name === 'player');
 
+        // 衝突判定
         const floors = this.children.list.filter(obj => obj.name.startsWith('ground'));
         if (this.player && floors.length > 0) {
             this.physics.add.collider(this.player, floors);
         }
         
-        // ★★★ 最後に親の finalizeSetup を呼び出して 'scene-ready' を発行 ★★★
+        // 最後に必ず親の finalizeSetup を呼び出して 'scene-ready' を発行
         super.finalizeSetup();
-    }
-    /**
-     * 汎用初期化ルーチン：シーンキーと同じ名前のJSONからレイアウトと物理を適用
-     * @param {string} sceneKey - 適用するデータのキー (e.g., 'JumpScene')
-     */
-    applyLayoutAndPhysics(sceneKey) {
-        const layoutData = this.cache.json.get(sceneKey);
-        if (!layoutData || !layoutData.objects) {
-            console.warn(`[${sceneKey}] Layout data is empty or invalid.`);
-            this.finalizeSetup(); // データがなくてもセットアップの最終段階へ
-            return;
-        }
-
-        console.log(`[${sceneKey}] Applying layout and physics from ${sceneKey}.json...`);
-        
-        for (const layout of layoutData.objects) {
-            // シーン内に同名オブジェクトがなければ、新規生成
-            // (このシーンは空から作るので、常に新規生成される)
-            const gameObject = this.add.image(layout.x, layout.y, layout.texture || layout.name.split('_')[0]);
-            gameObject.name = layout.name;
-
-            // Transform適用
-            gameObject.setPosition(layout.x, layout.y);
-            gameObject.setScale(layout.scaleX, layout.scaleY);
-            gameObject.setAngle(layout.angle);
-            gameObject.setAlpha(layout.alpha);
-            
-            // 物理プロパティ適用
-            if (layout.physics) {
-                this.physics.add.existing(gameObject, layout.physics.isStatic);
-                if (gameObject.body) {
-                    const phys = layout.physics;
-                    gameObject.body.setSize(phys.width, phys.height);
-                    gameObject.body.setOffset(phys.offsetX, phys.offsetY);
-                    gameObject.body.allowGravity = phys.allowGravity;
-                    gameObject.body.bounce.setTo(phys.bounceX, phys.bounceY);
-                    gameObject.body.collideWorldBounds = phys.collideWorldBounds;
-                }
-            }
-
-            // プレイヤーオブジェクトへの参照を保持
-            if (layout.name === 'player') {
-                this.player = gameObject;
-            }
-
-            // エディタに登録
-            const editor = this.plugins.get('EditorPlugin');
-            if (editor) {
-                editor.makeEditable(gameObject, this);
-            }
-        }
-        
-        this.finalizeSetup(); // レイアウト適用後にセットアップの最終段階へ
-    }
-    
-    /**
-     * レイアウト適用後に行う、シーンの最終セットアップ
-     */
-    finalizeSetup() {
-        // --- 衝突判定の定義 ---
-        // (将来的に、これもJSONから定義できるように拡張する)
-        const floors = this.children.list.filter(obj => obj.name.startsWith('ground'));
-        if (this.player && floors.length > 0) {
-            this.physics.add.collider(this.player, floors);
-        }
-
-        // ★★★ 開発の5ヶ条: 第1条 - createの最後にscene-readyを発行 ★★★
-        this.events.emit('scene-ready');
-        console.log("[JumpScene] Setup complete. Scene is ready.");
     }
     
     /**
@@ -175,6 +84,8 @@ export default class JumpScene extends BaseGameScene { // ★ 継承元を変更
             });
         }
     }
+
+   
 
     /**
      * シーンが破棄される時の後片付け

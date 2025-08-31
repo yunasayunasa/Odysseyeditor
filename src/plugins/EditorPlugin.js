@@ -450,15 +450,12 @@ export default class EditorPlugin extends Phaser.Plugins.BasePlugin {
 
   // src/plugins/EditorPlugin.js
 
-    /**
+      /**
      * 現在選択されているオブジェクトが所属するシーンのレイアウト情報を
-     * JSONでコンソールに出力する（シーン主体データI/O版）
+     * JSONでコンソールに出力する（最終確定版）
      */
     exportLayoutToJson() {
-        // --- 1. どのシーンをエクスポート対象とするかを決定 ---
         if (!this.selectedObject || !this.selectedObject.scene) {
-            console.warn("[EditorPlugin] Please select an object in the scene you want to export.");
-            // 将来的には、シーンを直接選択するUIを追加しても良い
             alert("Please select an object in the scene you want to export.");
             return;
         }
@@ -467,12 +464,10 @@ export default class EditorPlugin extends Phaser.Plugins.BasePlugin {
 
         console.log(`%c--- Exporting Layout for [${sceneKey}] ---`, "color: lightgreen; font-weight: bold;");
 
-        // --- 2. エクスポート用のデータ構造を準備 ---
         const sceneLayoutData = {
             objects: []
         };
 
-        // --- 3. そのシーンに所属する編集可能オブジェクトだけを抽出して処理 ---
         if (this.editableObjects.has(sceneKey)) {
             const objectsInScene = this.editableObjects.get(sceneKey);
 
@@ -488,6 +483,31 @@ export default class EditorPlugin extends Phaser.Plugins.BasePlugin {
                         angle: Math.round(gameObject.angle),
                         alpha: parseFloat(gameObject.alpha.toFixed(2)),
                     };
+                    
+                    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+                    // ★★★ ここからが、新しいデータ形式に対応するための追加部分です ★★★
+                    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+
+                    // --- オブジェクトの「種類」と「テクスチャ」を記録 ---
+                    // UISceneのカスタムクラスの場合、そのクラス名をtypeとして記録
+                    if (gameObject.constructor.name !== 'Image' && gameObject.constructor.name !== 'Text') {
+                        objData.type = gameObject.constructor.name;
+                    } else if (gameObject.type === 'Text') {
+                        objData.type = 'Text';
+                    } else {
+                        // それ以外の画像ベースのオブジェクトは、テクスチャキーを記録
+                        objData.texture = gameObject.texture.key;
+                    }
+                    
+                    // --- UISceneのオブジェクトが持つ「params」を記録 ---
+                    // layout.jsonから読み込んだ初期設定を、そのまま書き戻す
+                    const layoutData = targetScene.cache.json.get(sceneKey);
+                    if (layoutData && layoutData.objects) {
+                        const originalDef = layoutData.objects.find(obj => obj.name === gameObject.name);
+                        if (originalDef && originalDef.params) {
+                            objData.params = originalDef.params;
+                        }
+                    }
 
                     // Physics Component (もしあれば)
                     if (gameObject.body) {
