@@ -135,11 +135,7 @@ export default class UIScene extends Phaser.Scene {
         // グローバルな入力マネージャーでヒットテストを実行
         const hitObjects = this.game.input.hitTest(pointer, allObjects, this.cameras.main);
 
-        // どのオブジェクトにもヒットしなかった場合のみ、選択を解除
-        if (hitObjects.length === 0) {
-            const editor = this.plugins.get('EditorPlugin');
-            if (editor) editor.onScenePointerDown();
-        }
+        
     });
 }
       
