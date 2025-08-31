@@ -163,7 +163,7 @@ gameObject.y = Math.round(dragY);
 
         this.editorPropsContainer.appendChild(exportButton);
     }
-    }
+    
 
    /**
      * ★★★ 変更点3: exportLayoutToJsonメソッドを完全に書き換える ★★★
