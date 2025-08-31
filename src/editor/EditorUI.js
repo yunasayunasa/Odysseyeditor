@@ -94,6 +94,8 @@ export default class EditorUI {
                 const newImage = targetScene.add.image(pointer.worldX, pointer.worldY, assetKey);
                 newImage.name = `${assetKey}_${Date.now()}`;
                 this.plugin.makeEditable(newImage, targetScene);
+                    targetScene.scene.wake();
+
                 console.log(`[EditorUI] Dropped asset '${assetKey}' into scene '${targetScene.scene.key}'`);
             }
         });
