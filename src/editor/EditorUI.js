@@ -65,25 +65,42 @@ export default class EditorUI {
             }
         });
 
-      const gameCanvas = this.game.canvas;
+       const gameCanvas = this.game.canvas;
+
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        // ★★★ この2つのリスナーが最も重要です ★★★
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        // --- dragenter: ドラッグ要素がキャンバス領域に「入った」瞬間のイベント ---
+        gameCanvas.addEventListener('dragenter', (event) => {
+            event.preventDefault();
+        });
+
+        // --- dragover: ドラッグ要素がキャンバス領域の上を「移動中」のイベント ---
+        gameCanvas.addEventListener('dragover', (event) => {
+            event.preventDefault();
+        });
+        
+
+        // --- drop イベントリスナーをデバッグモードに ---
         gameCanvas.addEventListener('drop', (event) => {
             event.preventDefault();
 
-            // --- ログ爆弾フェーズ1: イベントとデータの確認 ---
-            console.log("💣💥 LOG BOMB V2 - PHASE 1: Drop event fired!");
+            // --- ログ爆弾フェーズ1: イベント発生の確認 ---
+            console.log("💣💥 LOG BOMB V2.1 - PHASE 1: Drop event fired!");
             const assetKey = event.dataTransfer.getData('text/plain');
             if (!assetKey) {
-                console.error("💣💥 BOMB DEFUSED: No assetKey found.");
+                console.error("💣💥 BOMB DEFUSED: No assetKey found in dataTransfer.");
                 return;
             }
-            console.log(`💣 Asset Key: '${assetKey}'`);
+            console.log(`💣 Asset Key: ${assetKey}`);
             const pointer = this.game.input.activePointer;
             console.log(`💣 Pointer Screen Coords: x=${pointer.x}, y=${pointer.y}`);
 
             // --- ログ爆弾フェーズ2: ターゲットシーンの特定 ---
-            console.log("💣💥 LOG BOMB V2 - PHASE 2: Searching for target scene...");
+            console.log("💣💥 LOG BOMB V2.1 - PHASE 2: Searching for target scene...");
             const scenes = this.game.scene.getScenes(true);
             let targetScene = null;
+            console.log(`💣 Active scenes found: ${scenes.map(s => s.scene.key).join(', ')}`);
             for (let i = scenes.length - 1; i >= 0; i--) {
                 const scene = scenes[i];
                 const contains = scene.cameras.main.worldView.contains(pointer.x, pointer.y);
@@ -95,15 +112,13 @@ export default class EditorUI {
                 }
             }
             if (!targetScene) {
-                console.error("💣💥 BOMB DEFUSED: No suitable target scene found.");
+                console.error("💣💥 BOMB DEFUSED: No suitable target scene found at drop location.");
                 return;
             }
 
             // --- ログ爆弾フェーズ3: オブジェクトの生成とプロパティの徹底調査 ---
-            console.log("💣💥 LOG BOMB V2 - PHASE 3: Creating GameObject...");
-            // ★★★ add.image を使って、生成と追加を同時に行い、Phaserに任せる ★★★
+            console.log("💣💥 LOG BOMB V2.1 - PHASE 3: Creating GameObject...");
             const newImage = targetScene.add.image(pointer.worldX, pointer.worldY, assetKey);
-            
             console.log("--- 💣 OBJECT PROPERTY INSPECTION 💣 ---");
             console.log(`  - Is object created?`, !!newImage);
             console.log(`  - Name (before set):`, newImage.name);
@@ -119,7 +134,7 @@ export default class EditorUI {
             newImage.name = `${assetKey}_${Date.now()}`;
 
             // --- ログ爆弾フェーズ4: レイヤーへの追加と状態変化の追跡 ---
-            console.log("💣💥 LOG BOMB V2 - PHASE 4: Adding to layer...");
+            console.log("💣💥 LOG BOMB V2.1 - PHASE 4: Adding to layer...");
             if (targetScene.scene.key === 'GameScene' && targetScene.layer && targetScene.layer.character) {
                 targetScene.layer.character.add(newImage);
                 console.log(`💣 Object moved to 'character' layer.`);
@@ -131,7 +146,7 @@ export default class EditorUI {
             }
             
             // --- ログ爆弾フェーズ5: エディタ登録 ---
-            console.log("💣💥 LOG BOMB V2 - PHASE 5: Making editable...");
+            console.log("💣💥 LOG BOMB V2.1 - PHASE 5: Making editable...");
             this.plugin.makeEditable(newImage, targetScene);
 
             console.log("💣💥 BOMB SEQUENCE COMPLETE. If you see this, the code ran without errors.");
