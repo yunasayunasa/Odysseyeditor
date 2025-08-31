@@ -112,11 +112,12 @@ export default class UIScene extends Phaser.Scene {
         this.enemyHpBar.setSize(250, 25);
         
         // ★★★ プラグインにオブジェクトを渡す ★★★
-        editor.makeEditable(this.panel);
-        editor.makeEditable(this.coinHud);
-        editor.makeEditable(this.playerHpBar);
-        editor.makeEditable(this.enemyHpBar);
-        editor.makeEditable(this.menuButton);
+         editor.makeEditable(this.panel, this);
+        editor.makeEditable(this.coinHud, this);
+        editor.makeEditable(this.playerHpBar, this);
+        editor.makeEditable(this.enemyHpBar, this);
+        editor.makeEditable(this.menuButton, this);
+    }
     }
     
     // ★★★ 背景クリックで選択解除 ★★★

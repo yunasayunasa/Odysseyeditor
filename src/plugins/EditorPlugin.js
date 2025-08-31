@@ -21,28 +21,28 @@ export default class EditorPlugin extends Phaser.Plugins.BasePlugin {
         }
     }
 
-    /**
+     /**
      * ゲームオブジェクトを編集可能にするためのメインメソッド
      * @param {Phaser.GameObjects.GameObject} gameObject - 編集可能にしたいオブジェクト
+     * @param {Phaser.Scene} scene - ★★★ この引数が重要 ★★★
      */
-    makeEditable(gameObject) {
+    makeEditable(gameObject, scene) {
         // オブジェクトが存在しない、または既に編集可能になっている場合は何もしない
-        if (!gameObject || gameObject.getData('isEditable')) return;
+        if (!gameObject || !scene || gameObject.getData('isEditable')) return;
         
-        // オブジェクトにインタラクティブ属性（クリックやドラッグを検知する能力）を設定
+        // オブジェクトにインタラクティブ属性を設定
         gameObject.setInteractive();
 
-        // Phaserのグローバル入力マネージャーを使って、このオブジェクトをドラッグ可能に設定
-        this.pluginManager.game.input.setDraggable(gameObject);
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        // ★★★ これがエラーを解決する正しいコードです ★★★
+        // ★★★ グローバルな 'game.input' ではなく、          ★★★
+        // ★★★ オブジェクトが所属する 'scene.input' を使います   ★★★
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        scene.input.setDraggable(gameObject);
 
-        // --- オブジェクトに個別のイベントリスナーを設定 ---
-
-        // 1. オブジェクトの上でマウスボタンが押された時のイベント
+        // --- オブジェクトに個別のイベントリスナーを設定 (ここから下は変更なし) ---
         gameObject.on('pointerdown', (pointer) => {
-            // ドラッグ操作とクリック操作を区別するため、まずドラッグ状態をリセット
             this.isDragging = false; 
-            
-            // 0.1秒待機する。この間に'dragstart'イベントが発生しなければ「クリック」と判定する
             setTimeout(() => {
                 if (!this.isDragging) {
                     this.selectedObject = gameObject;
@@ -50,33 +50,16 @@ export default class EditorPlugin extends Phaser.Plugins.BasePlugin {
                 }
             }, 100);
         });
-
-        // 2. オブジェクトのドラッグが開始された瞬間のイベント
-        gameObject.on('dragstart', (pointer) => {
-            this.isDragging = true; // ドラッグが開始されたことを記録
-        });
-        
-        // 3. オブジェクトがドラッグされている間のイベント
+        gameObject.on('dragstart', (pointer) => { this.isDragging = true; });
         gameObject.on('drag', (pointer, dragX, dragY) => {
-            // オブジェクトの座標をマウスの座標に追従させる
             gameObject.x = Math.round(dragX);
-            gameObject.y = Math.round(dragY);
-            // 選択中のオブジェクトであれば、プロパティパネルの座標表示もリアルタイムで更新
-            if(this.selectedObject === gameObject) {
-                this.updatePropertyPanel();
-            }
+gameObject.y = Math.round(dragY);
+            if(this.selectedObject === gameObject) this.updatePropertyPanel();
         });
-
-        // 4. マウスがオブジェクトの上に乗った時のイベント（ホバーエフェクト）
         gameObject.on('pointerover', () => gameObject.setTint(0x00ff00));
-        
-        // 5. マウスがオブジェクトの上から離れた時のイベント（ホバーエフェクト解除）
         gameObject.on('pointerout', () => gameObject.clearTint());
-
-        // このオブジェクトが編集可能であることを示すデータをセット（二重登録防止）
         gameObject.setData('isEditable', true);
     }
-    
     /**
      * シーンの何もない場所がクリックされた時に、選択を解除するためのメソッド
      * このメソッドは、各シーンの 'pointerdown' イベントから呼び出される
