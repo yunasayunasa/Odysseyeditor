@@ -65,7 +65,7 @@ export default class GameScene extends BaseGameScene {
         });
         
         this.scenarioManager.loadScenario(this.startScenario, this.startLabel);
-        this.time.delayedCall(10, () => this.scenarioManager.next());
+     //   this.time.delayedCall(10, () => this.scenarioManager.next());
     }
 
 

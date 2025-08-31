@@ -195,8 +195,21 @@ this.tweens.killAll();
         const targetScene = this.scene.get(sceneKey);
         
         // GameSceneは 'gameScene-load-complete' を待つ
-        if (sceneKey === 'GameScene') {
-            targetScene.events.once('gameScene-load-complete', () => {
+          if (sceneKey === 'GameScene') {
+            targetScene.events.once('scene-ready', () => { // ★ gameScene-load-complete から scene-ready に統一
+                
+                // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+                // ★★★ これが全てを解決する最後のロジックです ★★★
+                // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+                // GameSceneの準備が完全に整ったことを確認してから、
+                // 最初のシナリオ進行を「命令」する
+                targetScene.time.delayedCall(10, () => {
+                    if (targetScene.scenarioManager) {
+                        targetScene.scenarioManager.next();
+                    }
+                });
+
+                // その後で、遷移完了処理を行う
                 this._onTransitionComplete(sceneKey);
             });
         } else {
