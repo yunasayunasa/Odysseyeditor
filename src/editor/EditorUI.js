@@ -65,91 +65,61 @@ export default class EditorUI {
             }
         });
 
-       const gameCanvas = this.game.canvas;
-
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-        // ★★★ この2つのリスナーが最も重要です ★★★
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-        // --- dragenter: ドラッグ要素がキャンバス領域に「入った」瞬間のイベント ---
-        gameCanvas.addEventListener('dragenter', (event) => {
-            event.preventDefault();
-        });
-
-        // --- dragover: ドラッグ要素がキャンバス領域の上を「移動中」のイベント ---
-        gameCanvas.addEventListener('dragover', (event) => {
-            event.preventDefault();
-        });
-        
-
-        // --- drop イベントリスナーをデバッグモードに ---
+         const gameCanvas = this.game.canvas;
         gameCanvas.addEventListener('drop', (event) => {
             event.preventDefault();
 
-            // --- ログ爆弾フェーズ1: イベント発生の確認 ---
-            console.log("💣💥 LOG BOMB V2.1 - PHASE 1: Drop event fired!");
             const assetKey = event.dataTransfer.getData('text/plain');
-            if (!assetKey) {
-                console.error("💣💥 BOMB DEFUSED: No assetKey found in dataTransfer.");
-                return;
-            }
-            console.log(`💣 Asset Key: ${assetKey}`);
-            const pointer = this.game.input.activePointer;
-            console.log(`💣 Pointer Screen Coords: x=${pointer.x}, y=${pointer.y}`);
+            if (!assetKey) return;
+            
+            // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+            // ★★★ ここからが座標系を修正する核心部です ★★★
+            // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
 
-            // --- ログ爆弾フェーズ2: ターゲットシーンの特定 ---
-            console.log("💣💥 LOG BOMB V2.1 - PHASE 2: Searching for target scene...");
+            // 1. ゲームキャンバスの、ブラウザ上での位置とサイズを取得
+            const canvasBounds = gameCanvas.getBoundingClientRect();
+
+            // 2. ブラウザのクリック座標から、キャンバスの相対座標を計算
+            const localX = event.clientX - canvasBounds.left;
+            const localY = event.clientY - canvasBounds.top;
+            
+            // 3. Phaserのポインターの座標を、計算したローカル座標で上書き
+            //    これにより、以降の処理はすべて正しいPhaser座標系で行われる
+            const pointer = this.game.input.activePointer;
+            pointer.x = localX;
+            pointer.y = localY;
+            
+            // ★★★ これで座標系のズレが完全に修正されました ★★★
+
+
             const scenes = this.game.scene.getScenes(true);
             let targetScene = null;
-            console.log(`💣 Active scenes found: ${scenes.map(s => s.scene.key).join(', ')}`);
+            
             for (let i = scenes.length - 1; i >= 0; i--) {
                 const scene = scenes[i];
-                const contains = scene.cameras.main.worldView.contains(pointer.x, pointer.y);
-                console.log(`💣 Checking scene '${scene.scene.key}'... Pointer inside camera view: ${contains}`);
-                if (contains && scene.scene.key !== 'UIScene') {
+                // 正しい座標で判定するので、今度は成功するはず
+                if (scene.cameras.main.worldView.contains(pointer.x, pointer.y) && scene.scene.key !== 'UIScene') {
                     targetScene = scene;
-                    console.log(`💣💥 Target Scene Found: '${targetScene.scene.key}'`);
                     break;
                 }
             }
-            if (!targetScene) {
-                console.error("💣💥 BOMB DEFUSED: No suitable target scene found at drop location.");
-                return;
+
+            if (targetScene) {
+                // ... (オブジェクト生成のロジックは、以前のもので完璧です)
+                const newImage = targetScene.add.image(pointer.worldX, pointer.worldY, assetKey);
+                
+                if (targetScene.scene.key === 'GameScene' && targetScene.layer && targetScene.layer.character) {
+                    targetScene.layer.character.add(newImage);
+                } else {
+                    targetScene.add.existing(newImage);
+                }
+                
+                newImage.name = `${assetKey}_${Date.now()}`;
+                this.plugin.makeEditable(newImage, targetScene);
+            } else {
+                // (デバッグ用) ターゲットシーンが見つからなかった場合のログ
+                console.warn("[EditorUI] Drop successful, but no target scene found at calculated coordinates:", { x: localX, y: localY });
             }
-
-            // --- ログ爆弾フェーズ3: オブジェクトの生成とプロパティの徹底調査 ---
-            console.log("💣💥 LOG BOMB V2.1 - PHASE 3: Creating GameObject...");
-            const newImage = targetScene.add.image(pointer.worldX, pointer.worldY, assetKey);
-            console.log("--- 💣 OBJECT PROPERTY INSPECTION 💣 ---");
-            console.log(`  - Is object created?`, !!newImage);
-            console.log(`  - Name (before set):`, newImage.name);
-            console.log(`  - Texture Key:`, newImage.texture.key);
-            console.log(`  - Position (world): x=${newImage.x}, y=${newImage.y}`);
-            console.log(`  - Scale: x=${newImage.scaleX}, y=${newImage.scaleY}`);
-            console.log(`  - Alpha:`, newImage.alpha);
-            console.log(`  - Visible:`, newImage.visible);
-            console.log(`  - Depth:`, newImage.depth);
-            console.log(`  - Parent Container (before move):`, newImage.parentContainer || 'None (Scene Root)');
-            console.log("-----------------------------------------");
-            
-            newImage.name = `${assetKey}_${Date.now()}`;
-
-            // --- ログ爆弾フェーズ4: レイヤーへの追加と状態変化の追跡 ---
-            console.log("💣💥 LOG BOMB V2.1 - PHASE 4: Adding to layer...");
-            if (targetScene.scene.key === 'GameScene' && targetScene.layer && targetScene.layer.character) {
-                targetScene.layer.character.add(newImage);
-                console.log(`💣 Object moved to 'character' layer.`);
-                console.log("--- 💣 OBJECT PROPERTY INSPECTION (AFTER MOVE) 💣 ---");
-                console.log(`  - Parent Container (after move):`, newImage.parentContainer ? newImage.parentContainer.name || 'Unnamed Container' : 'None');
-                console.log(`  - Final Depth:`, newImage.depth);
-                console.log(`  - Character layer's total objects:`, targetScene.layer.character.list.length);
-                console.log("-----------------------------------------");
-            }
-            
-            // --- ログ爆弾フェーズ5: エディタ登録 ---
-            console.log("💣💥 LOG BOMB V2.1 - PHASE 5: Making editable...");
-            this.plugin.makeEditable(newImage, targetScene);
-
-            console.log("💣💥 BOMB SEQUENCE COMPLETE. If you see this, the code ran without errors.");
         });
     }
 }
