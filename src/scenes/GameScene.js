@@ -28,13 +28,14 @@ export default class GameScene extends BaseGameScene {
     create() {
         console.log("[GameScene] Create started.");
         
-        // --- 1. シーン固有のオブジェクトを生成 ---
+           // --- シーン固有のオブジェクトを「器」として先に生成 ---
         this.cameras.main.setBackgroundColor('#000000');
-        this.layer.background = this.add.container(0, 0).setDepth(0);
-        this.layer.character = this.add.container(0, 0).setDepth(10);
-        this.layer.cg = this.add.container(0, 0).setDepth(5);
-        this.layer.message = this.add.container(0, 0).setDepth(20);
-
+        this.layer = {
+            background: this.add.container(0, 0).setDepth(0),
+            character: this.add.container(0, 0).setDepth(10),
+            cg: this.add.container(0, 0).setDepth(5),
+            message: this.add.container(0, 0).setDepth(20)
+        };
         const soundManager = this.registry.get('soundManager');
         const configManager = this.registry.get('configManager');
         const stateManager = this.registry.get('stateManager');
@@ -52,35 +53,20 @@ export default class GameScene extends BaseGameScene {
         // (GameScene.json に定義されたオブジェクトがここで生成・配置される)
         this.applyLayoutAndPhysics();
     }
-
-    /**
-     * GameScene専用の最終セットアップ
-     * (BaseGameSceneのメソッドをオーバーライド)
+  /**
+     * BaseGameSceneのfinalizeSetupから呼び出される、このシーン専用の最終処理
      */
-    finalizeSetup() {
-        // --- 衝突判定など、レイアウト適用後に行う処理 ---
-        // (必要であれば、ここに物理の衝突判定などを記述)
-
+    onSetupComplete() {
         // --- クリックイベントをシナリオマネージャーに接続 ---
         this.input.on('pointerdown', () => {
-            if (this.scenarioManager) {
-                this.scenarioManager.onClick();
-            }
+            if (this.scenarioManager) this.scenarioManager.onClick();
         });
         
         // --- シナリオの実行を開始 ---
-        if (this.isResuming) {
-            // (セーブ/ロード機能は、今後の実装でここに統合)
-            console.log("GameScene: Resuming is not fully implemented in BaseGameScene yet.");
-        } else {
-            this.scenarioManager.loadScenario(this.startScenario, this.startLabel);
-            this.time.delayedCall(10, () => this.scenarioManager.next());
-        }
-
-        // --- 最後に、必ず親の finalizeSetup を呼び出して 'scene-ready' を発行 ---
-        // これを呼ばないと、SystemSceneが待ち続けてゲームがフリーズする
-        super.finalizeSetup();
+        this.scenarioManager.loadScenario(this.startScenario, this.startLabel);
+        this.time.delayedCall(10, () => this.scenarioManager.next());
     }
+  
         
     // ★★★ 修正箇所: stop()メソッドを一つに統一し、全てのクリーンアップを行う ★★★
     shutdown() {

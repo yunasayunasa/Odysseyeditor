@@ -1,4 +1,4 @@
-// src/scenes/BaseGameScene.js
+// src/scenes/BaseGameScene.js (最終確定・完成版)
 
 export default class BaseGameScene extends Phaser.Scene {
 
@@ -10,38 +10,45 @@ export default class BaseGameScene extends Phaser.Scene {
         const sceneKey = this.scene.key;
         const layoutPath = `assets/data/scenes/${sceneKey}.json`;
 
-        // JSONファイルの存在チェック
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        // ★★★ これが 'No layout data found' を解決するロジックです ★★★
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        
+        // 1. まず、JSONが既にキャッシュに存在するかチェック
         if (this.cache.json.has(sceneKey)) {
-             this.buildSceneFromLayout(sceneKey);
+            // 2. 存在すれば、次のフレームで構築処理を呼び出す
+            //    (シーンの初期化処理が完全に終わるのを待つための安全策)
+            this.time.delayedCall(1, () => {
+                this.buildSceneFromLayout(sceneKey);
+            });
         } else {
+            // 3. 存在しなければ、ファイルをロードする
             this.load.json(sceneKey, layoutPath);
+            // 4. ロードが完了したら、構築処理を呼び出す
             this.load.once(`filecomplete-json-${sceneKey}`, () => {
                 this.buildSceneFromLayout(sceneKey);
             });
+            // 5. ロードを開始
             this.load.start();
         }
     }
 
     /**
-     * ★★★ 新規メソッド ★★★
      * 読み込み済みのレイアウトデータを使って、シーンを構築する
      */
     buildSceneFromLayout(sceneKey) {
         const layoutData = this.cache.json.get(sceneKey);
         if (!layoutData || !layoutData.objects) {
-            console.warn(`[${sceneKey}] Layout data is empty or invalid.`);
-            this.finalizeSetup();
+            console.warn(`[${sceneKey}] No layout data found in ${sceneKey}.json. Finalizing setup.`);
+            this.finalizeSetup(); // データがなくても最終セットアップは必ず呼ぶ
             return;
         }
 
         console.log(`[${sceneKey}] Building scene from layout data...`);
         
         for (const layout of layoutData.objects) {
-            // ★★★ 変更点1: オブジェクトの「生成」を createObjectFromLayout に委譲 ★★★
             const gameObject = this.createObjectFromLayout(layout);
-
             if (gameObject) {
-                // ★★★ 変更点2: プロパティの「適用」を applyProperties に委譲 ★★★
                 this.applyProperties(gameObject, layout);
             }
         }
@@ -96,10 +103,32 @@ if (layout.visible !== undefined) {
         }
     }
 
-    /**
+   /**
      * レイアウト適用後に行う、シーンの最終セットアップ。
      */
     finalizeSetup() {
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        // ★★★ これが「ホバーで移動できない」を解決するロジックです ★★★
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        // この時点でシーン内の全てのオブジェクト（JSON由来も、コード由来も）が出揃っているので、
+        // それら全てをエディタの管理対象にする
+        const editor = this.plugins.get('EditorPlugin');
+        if (editor) {
+            this.children.list.forEach(child => {
+                // コンテナの中身も再帰的にチェック
+                if (child.list) {
+                    child.list.forEach(c => editor.makeEditable(c, this));
+                }
+                editor.makeEditable(child, this);
+            });
+        }
+
+        // シーン固有の最終処理を呼び出す (もしあれば)
+        if (this.onSetupComplete) {
+            this.onSetupComplete();
+        }
+
+        // 最後に準備完了を通知
         this.events.emit('scene-ready');
         console.log(`[${this.scene.key}] Setup complete. Scene is ready.`);
     }
