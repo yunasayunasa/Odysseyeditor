@@ -277,12 +277,11 @@ export default class EditorPlugin extends Phaser.Plugins.BasePlugin {
         this.createVector2Input(this.physicsPropsContainer, 'Size', body.setSize.bind(body), { x: body.width, y: body.height });
         this.createVector2Input(this.physicsPropsContainer, 'Offset', body.setOffset.bind(body), { x: body.offset.x, y: body.offset.y });
 
-        // --- 真偽値プロパティの編集 (チェックボックス) ---
-        this.createCheckbox(this.physicsPropsContainer, 'Immovable', body.immovable, (value) => body.setImmovable(value));
-        this.createCheckbox(this.physicsPropsContainer, 'Allow Gravity', body.allowGravity, (value) => body.setAllowGravity(value));
-        this.createCheckbox(this.physicsPropsContainer, 'Collide World Bounds', body.collideWorldBounds, (value) => body.setCollideWorldBounds(value));
+           this.createCheckbox(this.physicsPropsContainer, 'Immovable', body.immovable, null, 'immovable');
+        this.createCheckbox(this.physicsPropsContainer, 'Allow Gravity', body.allowGravity, null, 'allowGravity');
+        this.createCheckbox(this.physicsPropsContainer, 'Collide World Bounds', body.collideWorldBounds, null, 'collideWorldBounds');
 
-        // --- 数値プロパティの編集 (スライダー) ---
+        // --- 数値プロパティの編集 (変更なし) ---
         this.createRangeInput(this.physicsPropsContainer, 'Bounce X', body.bounce.x, 0, 1, 0.01, (value) => body.bounce.x = value);
         this.createRangeInput(this.physicsPropsContainer, 'Bounce Y', body.bounce.y, 0, 1, 0.01, (value) => body.bounce.y = value);
 
@@ -345,7 +344,17 @@ export default class EditorPlugin extends Phaser.Plugins.BasePlugin {
      * @param {boolean} initialValue - 初期値 (true/false)
      * @param {function} callback - 値が変更された時に呼び出される関数 (boolean を引数に取る)
      */
-    createCheckbox(container, label, initialValue, callback) {
+    // src/plugins/EditorPlugin.js
+
+    /**
+     * チェックボックスのUIパーツを生成する（最終修正版）
+     * @param {HTMLElement} container - 追加先のHTML要素
+     * @param {string} label - 表示ラベル
+     * @param {boolean} initialValue - 初期値 (true/false)
+     * @param {function} callback - 値が変更された時に呼び出される関数 (boolean を引数に取る)
+     * @param {string} propertyName - ★★★ 変更点1: 対象となるプロパティ名を追加 ★★★
+     */
+    createCheckbox(container, label, initialValue, callback, propertyName) {
         const row = document.createElement('div');
         const labelEl = document.createElement('label');
         labelEl.innerText = label;
@@ -354,7 +363,26 @@ export default class EditorPlugin extends Phaser.Plugins.BasePlugin {
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.checked = initialValue;
-        checkbox.addEventListener('change', () => callback(checkbox.checked));
+
+        checkbox.addEventListener('change', () => {
+            // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+            // ★★★ これがエラーを解決する正しいロジックです ★★★
+            // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+            
+            // 選択中のオブジェクトとその物理ボディが存在することを確認
+            if (this.selectedObject && this.selectedObject.body) {
+                // セッターメソッドではなく、プロパティに直接代入する
+                this.selectedObject.body[propertyName] = checkbox.checked;
+
+                // immovableプロパティは、静的/動的ボディの切り替えも伴うため、特別な処理が必要
+                if (propertyName === 'immovable') {
+                    // immovable: true なら静的(static)に、falseなら動的(dynamic)に設定
+                    this.selectedObject.body.isStatic = checkbox.checked;
+                    // 変更を物理ワールドに反映させる
+                    this.selectedObject.body.updateFromGameObject();
+                }
+            }
+        });
 
         row.appendChild(labelEl);
         row.appendChild(checkbox);
