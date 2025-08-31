@@ -105,13 +105,61 @@ export default class EditorPlugin extends Phaser.Plugins.BasePlugin {
     /**
      * ★★★ 新規メソッド: Transformタブの中身を生成する ★★★
      */
-    populateTransformTab() {
-        const properties = { /* ... x, y, scaleなど ... */ };
-        for (const key in properties) {
-            // ... (これまでのプロパティHTML要素の生成ロジックをここに移動)
+    
+        populateTransformTab() {
+        // ★★★ 変更点1: プロパティパネルの中身を一度クリア ★★★
+        this.editorPropsContainer.innerHTML = '';
+        if (!this.selectedObject) return;
+
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        // ★★★ ここからが、リネーム機能の追加部分です ★★★
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+
+        // --- Nameプロパティの編集UI ---
+        const nameRow = document.createElement('div');
+        const nameLabel = document.createElement('label');
+        nameLabel.innerText = 'Name:';
+        const nameInput = document.createElement('input');
+        nameInput.type = 'text';
+        nameInput.value = this.selectedObject.name || ''; // 現在の名前を表示
+        
+        // 入力が変更されたら、オブジェクトのnameプロパティをリアルタイムに更新
+        nameInput.addEventListener('input', (e) => {
+            const newName = e.target.value;
+            if (this.selectedObject) {
+                this.selectedObject.name = newName;
+                // ★重要★ パネルのタイトルもリアルタイムで更新
+                this.editorTitle.innerText = `Editing: ${newName}`;
+            }
+        });
+        
+        nameRow.appendChild(nameLabel);
+        nameRow.appendChild(nameInput);
+        this.editorPropsContainer.appendChild(nameRow);
+
+        // --- 区切り線 ---
+        const separator = document.createElement('hr');
+        this.editorPropsContainer.appendChild(separator);
+
+
+        // --- 既存のTransformプロパティ (x, y, scaleなど) の生成 ---
+        const properties = {
+            x: { type: 'number', step: 1 },
+            y: { type: 'number', step: 1 },
+            scaleX: { type: 'range', min: 0.1, max: 5, step: 0.01 },
+            scaleY: { type: 'range', min: 0.1, max: 5, step: 0.01 },
+            angle: { type: 'range', min: -180, max: 180, step: 1 },
+            alpha: { type: 'range', min: 0, max: 1, step: 0.01 }
+        };
+           for (const key in properties) {
+            // ... (これまでのプロパティHTML要素の生成ロジックは変更なし)
         }
-        // ... (エクスポートボタンもここに移動)
+
+        // --- エクスポートボタン (変更なし) ---
+        // ...
+    
     }
+
 
     /**
      * ★★★ 新規メソッド: Physicsタブの中身を生成する ★★★

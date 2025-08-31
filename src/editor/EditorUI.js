@@ -15,6 +15,7 @@ export default class EditorUI {
         // --- 必要な機能だけを初期化 ---
         this.populateAssetBrowser();
         this.initDragAndDrop();
+        this.objectCounters = {};
     }
     
     /**
@@ -116,28 +117,29 @@ export default class EditorUI {
                     break;
                 }
             }
-            if (!targetScene) {
-                console.error("💣💥 BOMB DEFUSED: No suitable target scene found at calculated coordinates.");
-                return;
-            }
+               if (targetScene) {
+                const newImage = targetScene.add.image(pointer.worldX, pointer.worldY, assetKey);
 
-            // --- ログ爆弾フェーズ3: オブジェクトの生成と追加 ---
-            console.log("💣💥 LOG BOMB FINAL - PHASE 3: Creating and adding GameObject...");
-            const newImage = targetScene.add.image(pointer.worldX, pointer.worldY, assetKey);
-            console.log(`💣 Object created. World Coords: x=${pointer.worldX}, y=${pointer.worldY}`);
-            newImage.name = `${assetKey}_${Date.now()}`;
+                // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+                // ★★★ ここが、連番命名ロジックです ★★★
+                // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+                
+                // このアセットキーのカウンターを初期化またはインクリメント
+                if (!this.objectCounters[assetKey]) {
+                    this.objectCounters[assetKey] = 1;
+                } else {
+                    this.objectCounters[assetKey]++;
+                }
+                
+                // 新しい名前を生成 (例: yuko_smile_1, yuko_smile_2)
+                newImage.name = `${assetKey}_${this.objectCounters[assetKey]}`;
 
-            if (targetScene.scene.key === 'GameScene' && targetScene.layer && targetScene.layer.character) {
-                targetScene.layer.character.add(newImage);
-                console.log(`💣 Object added to GameScene's 'character' layer.`);
-            } else {
-                console.log(`💣 Object added directly to scene '${targetScene.scene.key}'.`);
+                this.plugin.makeEditable(newImage, targetScene);
+
+                // ★★★ ドロップ直後に、そのオブジェクトを選択状態にする ★★★
+                this.plugin.selectedObject = newImage;
+                this.plugin.updatePropertyPanel();
             }
-            
-            // --- ログ爆弾フェーズ4: 最終確認 ---
-            console.log("💣💥 LOG BOMB FINAL - PHASE 4: Making editable...");
-            this.plugin.makeEditable(newImage, targetScene);
-            console.log("💣💥 BOMB SEQUENCE COMPLETE. Object should be visible.");
         });
     }
 }
