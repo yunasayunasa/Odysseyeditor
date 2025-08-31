@@ -245,17 +245,20 @@ export default class EditorPlugin extends Phaser.Plugins.BasePlugin {
         button.innerText = 'Enable Arcade Physics';
         button.onclick = () => {
             if (this.selectedObject) {
-                // オブジェクトに物理ボディを追加する
-                    // 1. 物理ボディを追加する
-                //    第2引数を 'true' にすることで、「静的(static)ボディ」として生成する
+                // 静的(static)ボディとして生成する (変更なし)
                 this.pluginManager.game.scene.getScene('GameScene').physics.add.existing(this.selectedObject, true);
                 
-                // 2. 静的ボディは重力の影響をデフォルトで受けないが、念のため明示的にOFFにする
+                // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+                // ★★★ ここがエラーを修正する正しいコードです ★★★
+                // ★★★ メソッド呼び出しではなく、プロパティを直接変更します ★★★
+                // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
                 if (this.selectedObject.body) {
-                    this.selectedObject.body.setAllowGravity(false);
+                    // 'setAllowGravity(false)' ではなく、
+                    // 'allowGravity' プロパティに直接 'false' を代入する
+                    this.selectedObject.body.allowGravity = false;
                 }
 
-                // 表示を即座に更新する
+                // 表示を即座に更新する (変更なし)
                 this.updatePropertyPanel();
             }
         };
