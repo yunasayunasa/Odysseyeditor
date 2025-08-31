@@ -50,15 +50,7 @@
   },
   "GameScene": {
     "objects": [
-      {
-        "name": "yuna",
-        "x": -200,
-        "y": null,
-        "scaleX": 1,
-        "scaleY": 1,
-        "angle": 0,
-        "alpha": 1
-      },
+      
       {
         "name": "kaito",
         "x": 802,
@@ -68,15 +60,7 @@
         "angle": 0,
         "alpha": 1
       },
-      {
-        "name": "roger",
-        "x": -440,
-        "y": 450,
-        "scaleX": 1,
-        "scaleY": 1,
-        "angle": 0,
-        "alpha": 1
-      },
+     
       {
         "name": "yuna",
         "x": 280,
