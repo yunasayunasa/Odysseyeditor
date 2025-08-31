@@ -67,89 +67,54 @@ export default class EditorUI {
 
         const gameCanvas = this.game.canvas;
 
-        gameCanvas.addEventListener('dragover', (event) => {
-            event.preventDefault();
-        });
-
-     // --- drop イベントリスナーをデバッグモードに ---
+     const gameCanvas = this.game.canvas;
         gameCanvas.addEventListener('drop', (event) => {
             event.preventDefault();
-
-            // --- ログ爆弾フェーズ1: イベント発生の確認 ---
-            console.log("💣💥 LOG BOMB PHASE 1: Drop event fired!");
-
             const assetKey = event.dataTransfer.getData('text/plain');
-            if (!assetKey) {
-                console.error("💣💥 BOMB DEFUSED: No assetKey found in dataTransfer.");
-                return;
-            }
-            console.log(`💣 Asset Key: ${assetKey}`);
+            if (!assetKey) return;
 
             const pointer = this.game.input.activePointer;
-            console.log(`💣 Pointer Coordinates: x=${pointer.x}, y=${pointer.y}`);
-
-            // --- ログ爆弾フェーズ2: ターゲットシーンの特定 ---
-            console.log("💣💥 LOG BOMB PHASE 2: Searching for target scene...");
             const scenes = this.game.scene.getScenes(true);
             let targetScene = null;
-            
-            console.log(`💣 Active scenes found: ${scenes.map(s => s.scene.key).join(', ')}`);
 
             for (let i = scenes.length - 1; i >= 0; i--) {
                 const scene = scenes[i];
-                const hit = scene.cameras.main.hitTest(pointer.x, pointer.y);
-                console.log(`💣 Checking scene '${scene.scene.key}'... Hit test result: ${hit}`);
 
-                if (hit && scene.scene.key !== 'UIScene') {
+                // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+                // ★★★ これがエラーを修正する正しい一行です ★★★
+                // ★★★ 'scene.cameras.main.hitTest' ではなく、      ★★★
+                // ★★★ 'scene.input.hitTest' を使います            ★★★
+                // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+                const hitObjects = scene.input.hitTest(pointer, scene.children.list, scene.cameras.main);
+                
+                // カメラの範囲内にポインターがあり、かつUISceneではない場合
+                // hitTestはカメラ範囲外なら空配列を返すので、これだけで判定可能
+                if (hitObjects.length >= 0 && scene.scene.key !== 'UIScene' && scene.cameras.main.worldView.contains(pointer.x, pointer.y)) {
                     targetScene = scene;
-                    console.log(`💣💥 Target Scene Found: '${targetScene.scene.key}'`);
                     break;
                 }
             }
 
-            if (!targetScene) {
-                console.error("💣💥 BOMB DEFUSED: No suitable target scene found at drop location.");
-                return;
-            }
 
-            // --- ログ爆弾フェーズ3: オブジェクトの生成と追加 ---
-            console.log("💣💥 LOG BOMB PHASE 3: Creating and adding GameObject...");
-            const newImage = targetScene.add.image(pointer.worldX, pointer.worldY, assetKey);
-            
-            if (!newImage) {
-                 console.error("💣💥 BOMB DEFUSED: targetScene.add.image() failed to return a new object.");
-                 return;
-            }
-            console.log(`💣 New image object created. Texture key: '${newImage.texture.key}'`);
-            console.log(`💣 Initial position: x=${newImage.x}, y=${newImage.y}`);
-            
-            newImage.name = `${assetKey}_${Date.now()}`;
+            if (targetScene) {
+                // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+                // ★★★ ここからが、レイヤー問題を解決する核心部です ★★★
+                // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+                
+                let newImage;
 
-            if (targetScene.scene.key === 'GameScene' && targetScene.layer && targetScene.layer.character) {
-                targetScene.layer.character.add(newImage);
-                console.log(`💣 Object added to GameScene's character layer.`);
-                console.log(`💣 Character layer size: ${targetScene.layer.character.list.length}`);
-            } else {
-                // GameScene以外、あるいはレイヤーがない場合は、add.existingでシーン直下に追加
-                // targetScene.add.existing(newImage); // add.imageが既に追加しているので不要
-                console.log(`💣 Object added directly to scene '${targetScene.scene.key}'.`);
+                // 1. まず、PhaserのGameObjectとして画像オブジェクトを「作成」する
+                //    まだシーンには追加しない
+                 const imageObject = new Phaser.GameObjects.Image(targetScene, pointer.worldX, pointer.worldY, assetKey);
+                if (targetScene.scene.key === 'GameScene' && targetScene.layer && targetScene.layer.character) {
+                    targetScene.layer.character.add(imageObject);
+                } else {
+                    targetScene.add.existing(imageObject);
+                }
+                imageObject.name = `${assetKey}_${Date.now()}`;
+                this.plugin.makeEditable(imageObject, targetScene);
             }
-            
-            // --- ログ爆弾フェーズ4: 可視性と深度のチェック ---
-            console.log("💣💥 LOG BOMB PHASE 4: Checking visibility and depth...");
-            newImage.setVisible(true); // 念のため、強制的に表示状態にする
-            console.log(`💣 Object visible: ${newImage.visible}`);
-            console.log(`💣 Object alpha: ${newImage.alpha}`);
-            console.log(`💣 Object depth: ${newImage.depth}`);
-            
-            if(targetScene.layer && targetScene.layer.character){
-                 console.log(`💣 Parent container (layer) depth: ${targetScene.layer.character.depth}`);
-            }
-
-            // --- ログ爆弾フェーズ5: エディタ登録 ---
-            console.log("💣💥 LOG BOMB PHASE 5: Making object editable...");
-            this.plugin.makeEditable(newImage, targetScene);
-
-            console.log("💣💥 BOMB SEQUENCE COMPLETE. Check the scene display.");
         });
-    }}
+    }
+    // ★★★ 変更点2: 不要になった initPanelDrag と initAssetBrowserToggle メソッドを完全に削除 ★★★
+}
