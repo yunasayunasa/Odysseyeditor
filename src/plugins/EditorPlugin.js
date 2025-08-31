@@ -37,7 +37,70 @@ init() {
             
             this.populateAssetBrowser(); // アセット一覧の生成
         }
+
+           // --- 1. ドラッグ開始時の処理 ---
+        // document全体でリッスンすることで、確実にアセットアイテムのドラッグを検知
+        document.addEventListener('dragstart', (event) => {
+            // ドラッグされた要素がアセットアイテムか確認
+            const assetItem = event.target.closest('.asset-item');
+            if (assetItem) {
+                // ドラッグ中のデータを設定（アセットキーを'text'として渡すのが標準的）
+                event.dataTransfer.setData('text/plain', assetItem.dataset.assetKey);
+                // ドラッグ中のカーソルエフェクトを設定
+                event.dataTransfer.effectAllowed = 'copy';
+            }
+        });
+
+        // --- 2. ゲーム画面上でのドラッグ中の処理 ---
+        const gameCanvas = this.pluginManager.game.canvas;
+
+        // ブラウザのデフォルト動作（画像を開くなど）をキャンセルするために必要
+        gameCanvas.addEventListener('dragover', (event) => {
+            event.preventDefault(); 
+        });
+
+        // --- 3. ゲーム画面上でのドロップ時の処理 ---
+        gameCanvas.addEventListener('drop', (event) => {
+            event.preventDefault(); // デフォルト動作をキャンセル
+
+            // ドラッグされてきたデータを取得 (dragstartで設定したアセットキー)
+            const assetKey = event.dataTransfer.getData('text/plain');
+            if (!assetKey) return;
+
+            // ドロップされた座標をPhaserのポインターから取得
+            const pointer = this.pluginManager.game.input.activePointer;
+
+            // ドロップされた座標がどのシーンの上にあるかを判定
+            const scenes = this.pluginManager.game.scene.getScenes(true);
+            let targetScene = null;
+            // シーンリストは手前が末尾なので、逆順にチェックする
+            for (let i = scenes.length - 1; i >= 0; i--) {
+                const scene = scenes[i];
+                // エディタパネルやアセットブラウザの裏にあるシーンは除外
+                if (scene.cameras.main.hitTest(pointer.x, pointer.y)) {
+                    // ただしUISceneはオブジェクト配置の対象外とする（お好みで変更可）
+                    if (scene.scene.key !== 'UIScene') {
+                        targetScene = scene;
+                        break;
+                    }
+                }
+            }
+
+            if (targetScene) {
+                // ★★★ オブジェクトを生成！ ★★★
+                const newImage = targetScene.add.image(pointer.worldX, pointer.worldY, assetKey);
+                
+                // 新しいオブジェクトにユニークな名前を付ける
+                newImage.name = `${assetKey}_${Date.now()}`;
+                
+                // 即座に編集可能にする
+                this.makeEditable(newImage, targetScene);
+
+                console.log(`[EditorPlugin] Dropped asset '${assetKey}' into scene '${targetScene.scene.key}'`);
+            }
+        });
     }
+    
  /**
      * パネルをドラッグ移動可能にし、入力の貫通を防ぐ
      * @param {HTMLElement} panel - 対象のパネル要素
@@ -133,7 +196,7 @@ init() {
             // HTMLのデータ属性として埋め込んでおく
             itemDiv.dataset.assetKey = asset.key;
             itemDiv.dataset.assetPath = asset.path;
-            
+               itemDiv.draggable = true;
             // 2. プレビュー画像を表示するための <img> タグを作る
             const previewImg = document.createElement('img');
             previewImg.className = 'asset-preview';
