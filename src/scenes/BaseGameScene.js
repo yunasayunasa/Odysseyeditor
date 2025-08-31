@@ -14,6 +14,7 @@ export default class BaseGameScene extends Phaser.Scene {
         
         // buildSceneFromLayoutを即座に呼び出す
         this.buildSceneFromLayout(layoutData);
+        this.finalizeSetup();
     }
 
 
@@ -24,7 +25,7 @@ export default class BaseGameScene extends Phaser.Scene {
         const sceneKey = this.scene.key;
         if (!layoutData || !layoutData.objects) {
             console.warn(`[${sceneKey}] No layout data found for this scene. Finalizing setup.`);
-            this.finalizeSetup();
+            
             return;
         }
 
