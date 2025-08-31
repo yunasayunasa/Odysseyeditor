@@ -1,4 +1,8 @@
 
+import BaseGameScene from './BaseGameScene.js';
+import ScenarioManager from '../core/ScenarioManager.js';
+import MessageWindow from '../ui/MessageWindow.js';
+import { tagHandlers } from '../handlers/index.js';
 export default class GameScene extends BaseGameScene {
     constructor() {
         super({ key: 'GameScene' });
