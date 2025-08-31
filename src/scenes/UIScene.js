@@ -121,30 +121,24 @@ export default class UIScene extends Phaser.Scene {
     
     
     // ★★★ 背景クリックで選択解除 ★★★
-     this.input.on('pointerdown', (pointer) => {
+       this.input.on('pointerdown', (pointer) => {
         
-        // ★★★ 正しい書き方はこちらです ★★★
-        // 'pointer.getObjectsUnderPointer()' ではなく、
-        // 'this.input.hitTest(...)' を使います。
-        const hitObjects = this.input.hitTest(pointer, this.children.list, this.cameras.main);
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        // ★★★ これが正しい 'hitTest' の呼び出し方です ★★★
+        // ★★★ "this.input" ではなく "this.game.input" から呼び出します ★★★
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        
+        // 現在アクティブな全シーンのオブジェクトリストを取得
+        const scenes = this.scene.manager.getScenes(true);
+        const allObjects = scenes.flatMap(scene => scene.children.list);
 
-        // もし、このシーン(UIScene)のオブジェクトが何もクリックされなかったら
+        // グローバルな入力マネージャーでヒットテストを実行
+        const hitObjects = this.game.input.hitTest(pointer, allObjects, this.cameras.main);
+
+        // どのオブジェクトにもヒットしなかった場合のみ、選択を解除
         if (hitObjects.length === 0) {
-            
-            // ★★★ GameScene側もチェックする（念のため）★★★
-            const gameScene = this.scene.get('GameScene');
-            if (gameScene && gameScene.scene.isActive()) {
-                const gameHitObjects = gameScene.input.hitTest(pointer, gameScene.children.list, gameScene.cameras.main);
-                // GameSceneでも何もクリックされていなかったら、選択解除を実行
-                if (gameHitObjects.length === 0) {
-                    const editor = this.plugins.get('EditorPlugin');
-                    if (editor) editor.onScenePointerDown();
-                }
-            } else {
-                 // GameSceneがない場合は、UISceneだけで判断
-                 const editor = this.plugins.get('EditorPlugin');
-                 if (editor) editor.onScenePointerDown();
-            }
+            const editor = this.plugins.get('EditorPlugin');
+            if (editor) editor.onScenePointerDown();
         }
     });
 }
