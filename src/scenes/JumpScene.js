@@ -1,7 +1,7 @@
-// src/scenes/JumpScene.js
 
-export default class JumpScene extends Phaser.Scene {
+import BaseGameScene from './BaseGameScene.js'; // ★ インポート
 
+export default class JumpScene extends BaseGameScene { // ★ 継承元を変更
     constructor() {
         super({ key: 'JumpScene' });
         
@@ -35,7 +35,7 @@ export default class JumpScene extends Phaser.Scene {
     create() {
         // --- 1. シーン固有の初期化 ---
         console.log("[JumpScene] Create started.");
-        
+        this.applyLayoutAndPhysics();
         // カメラの背景色を設定
         this.cameras.main.setBackgroundColor('#4488cc');
         
@@ -63,7 +63,21 @@ export default class JumpScene extends Phaser.Scene {
         const soundManager = this.registry.get('soundManager');
         soundManager.playBgm('bgm_action'); // 仮のBGMキー
     }
+  /**
+     * JumpScene専用の最終セットアップ
+     */
+    finalizeSetup() {
+        // playerへの参照を保持
+        this.player = this.children.list.find(obj => obj.name === 'player');
 
+        const floors = this.children.list.filter(obj => obj.name.startsWith('ground'));
+        if (this.player && floors.length > 0) {
+            this.physics.add.collider(this.player, floors);
+        }
+        
+        // ★★★ 最後に親の finalizeSetup を呼び出して 'scene-ready' を発行 ★★★
+        super.finalizeSetup();
+    }
     /**
      * 汎用初期化ルーチン：シーンキーと同じ名前のJSONからレイアウトと物理を適用
      * @param {string} sceneKey - 適用するデータのキー (e.g., 'JumpScene')

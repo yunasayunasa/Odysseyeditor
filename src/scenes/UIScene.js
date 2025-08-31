@@ -1,8 +1,8 @@
 // src/scenes/UIScene.js
 
 import { CUSTOM_UI_MAP } from '../ui/index.js';
-
-export default class UIScene extends Phaser.Scene {
+import BaseGameScene from './BaseGameScene.js'; 
+export default class UIScene extends BaseGameScene {
     
     constructor() {
         super({ key: 'UIScene' });
@@ -19,7 +19,7 @@ export default class UIScene extends Phaser.Scene {
     create() {
         console.log("UIScene: データ駆動型アーキテクチャでUIを生成します。");
         this.scene.bringToTop();
-        
+        this.applyLayoutAndPhysics();
         const stateManager = this.sys.registry.get('stateManager');
         const uiDefine = this.cache.json.get('ui_define');
              const layoutData = this.cache.json.get('layout_data');
@@ -312,6 +312,54 @@ export default class UIScene extends Phaser.Scene {
         if (this.player_hp_bar) this.player_hp_bar.setVisible(isBattleScene); 
         if (this.enemy_hp_bar) this.enemy_hp_bar.setVisible(isBattleScene);
     }
+
+        /**
+     * ★★★ 新規メソッド: UIScene専用のオブジェクト生成ロジック ★★★
+     * (BaseGameSceneのメソッドをオーバーライド)
+     */
+    createObjectFromLayout(layout) {
+        let uiElement = null;
+        const stateManager = this.registry.get('stateManager');
+        const CustomUIClass = CUSTOM_UI_MAP[layout.type];
+
+        if (CustomUIClass) {
+            uiElement = new CustomUIClass(this, { ...layout.params, stateManager });
+        } else {
+            switch (layout.type) {
+                case 'Text':
+                    uiElement = this.add.text(layout.x, layout.y, layout.params.text, layout.params.style).setOrigin(0.5);
+                    break;
+                case 'Panel':
+                    uiElement = this.createBottomPanel();
+                    break;
+            }
+        }
+
+        if (uiElement) {
+            uiElement.name = layout.name;
+            this[layout.name] = uiElement;
+            
+            // TransformとEditor登録は親クラスのメソッドを再利用
+            super.createObjectFromLayout(layout);
+        }
+    }
+    
+    /**
+     * ★★★ 変更点: UIScene専用の最終セットアップ ★★★
+     * (BaseGameSceneのメソッドをオーバーライド)
+     */
+    finalizeSetup() {
+        this.assignEventListeners();
+        
+        const systemScene = this.scene.get('SystemScene');
+        if (systemScene) {
+            systemScene.events.on('transition-complete', this.onSceneTransition, this);
+        }
+
+        // UISceneはSystemSceneに直接管理されるので、'scene-ready'は発行しない
+        console.log(`[${this.scene.key}] Setup complete.`);
+    }
+    
 
     shutdown() {
         console.log("UIScene: shutdown");
