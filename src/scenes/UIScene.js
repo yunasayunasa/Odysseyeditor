@@ -121,10 +121,30 @@ export default class UIScene extends Phaser.Scene {
     
     
     // ★★★ 背景クリックで選択解除 ★★★
-    this.input.on('pointerdown', (pointer) => {
-        if (pointer.getObjectsUnderPointer().length === 0) {
-            const editor = this.plugins.get('EditorPlugin');
-            if (editor) editor.onScenePointerDown();
+     this.input.on('pointerdown', (pointer) => {
+        
+        // ★★★ 正しい書き方はこちらです ★★★
+        // 'pointer.getObjectsUnderPointer()' ではなく、
+        // 'this.input.hitTest(...)' を使います。
+        const hitObjects = this.input.hitTest(pointer, this.children.list, this.cameras.main);
+
+        // もし、このシーン(UIScene)のオブジェクトが何もクリックされなかったら
+        if (hitObjects.length === 0) {
+            
+            // ★★★ GameScene側もチェックする（念のため）★★★
+            const gameScene = this.scene.get('GameScene');
+            if (gameScene && gameScene.scene.isActive()) {
+                const gameHitObjects = gameScene.input.hitTest(pointer, gameScene.children.list, gameScene.cameras.main);
+                // GameSceneでも何もクリックされていなかったら、選択解除を実行
+                if (gameHitObjects.length === 0) {
+                    const editor = this.plugins.get('EditorPlugin');
+                    if (editor) editor.onScenePointerDown();
+                }
+            } else {
+                 // GameSceneがない場合は、UISceneだけで判断
+                 const editor = this.plugins.get('EditorPlugin');
+                 if (editor) editor.onScenePointerDown();
+            }
         }
     });
 }
