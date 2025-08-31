@@ -124,27 +124,39 @@ if (layout.visible !== undefined) {
         }
     }
 
-   /**
-     * レイアウト適用後に行う、シーンの最終セットアップ。
-     */
-     finalizeSetup() {
-        // ★★★ 変更点: ここでまず、全オブジェクトを編集可能にする ★★★
+   // src/scenes/BaseGameScene.js
+
+    finalizeSetup() {
         const editor = this.plugins.get('EditorPlugin');
         if (editor) {
             this.children.list.forEach(child => {
-                if (child.list) {
-                    child.list.forEach(c => editor.makeEditable(c, this));
+                // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+                // ★★★ これが全てを解決する最後の修正です ★★★
+                // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+
+                // もし child がコンテナなら、その「中身」だけを編集対象にする
+                if (child instanceof Phaser.GameObjects.Container) {
+                    child.list.forEach(grandChild => {
+                        // コンテナの中のオブジェクトに名前があれば、編集可能にする
+                        if (grandChild.name) {
+                            editor.makeEditable(grandChild, this);
+                        }
+                    });
+                } 
+                // コンテナでなければ、オブジェクト自身を編集対象にする
+                else {
+                    // オブジェクトに名前があれば、編集可能にする
+                    if (child.name) {
+                        editor.makeEditable(child, this);
+                    }
                 }
-                editor.makeEditable(child, this);
             });
         }
         
-        // ★★★ 変更点: 次に、子シーンのカスタムセットアップを呼び出す ★★★
         if (this.onSetupComplete) {
             this.onSetupComplete();
         }
 
-        // 最後に準備完了を通知
         this.events.emit('scene-ready');
         console.log(`[${this.scene.key}] Setup complete. Scene is ready.`);
     }
