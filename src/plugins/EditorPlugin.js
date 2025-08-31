@@ -39,46 +39,65 @@ init() {
         }
     }
  /**
-     * ★★★ 新規メソッド: パネルをドラッグ移動可能にする ★★★
+     * パネルをドラッグ移動可能にし、入力の貫通を防ぐ
      * @param {HTMLElement} panel - 対象のパネル要素
      * @param {string} headerSelector - ドラッグハンドルとなるヘッダーのCSSセレクタ
      */
     initPanel(panel, headerSelector) {
         if (!panel) return;
-        panel.style.display = 'block'; // まず表示
+        panel.style.display = 'block';
 
         const header = panel.querySelector(headerSelector);
         if (!header) return;
 
+        // ★★★ 変更点1: パネル全体にmousedownイベントを追加 ★★★
+        // パネルのどの部分（ヘッダー、コンテンツ、ボタン）がクリックされても、
+        // Phaser側の入力はいったん無効にする
+        panel.addEventListener('mousedown', (e) => {
+            // ★★★ これが核心部です ★★★
+            // Phaserのゲーム全体の入力を無効化する
+            this.pluginManager.game.input.enabled = false;
+        });
+
+        // ★★★ 変更点2: マウスボタンが「どこで」離されたかを検知するため、windowに追加 ★★★
+        // パネルの外でマウスアップしても、入力を復帰させる必要がある
+        window.addEventListener('mouseup', () => {
+            // ★★★ これが核心部です ★★★
+            // 一定時間後にPhaserの入力を有効に戻す
+            // setTimeoutを使うのは、クリックイベントの処理が完全に終わってから
+            // 入力を復帰させるための、安全策です。
+            setTimeout(() => {
+                if (this.pluginManager.game) { // ゲームがまだ存在するか確認
+                    this.pluginManager.game.input.enabled = true;
+                }
+            }, 100);
+        });
+
+        
+        // --- 以下、ドラッグ移動のロジック (少し修正) ---
         let isDragging = false;
         let offsetX, offsetY;
 
         header.addEventListener('mousedown', (e) => {
             isDragging = true;
-            // パネルの左上角とマウスカーソルの差分を計算
             offsetX = e.clientX - panel.offsetLeft;
             offsetY = e.clientY - panel.offsetTop;
-            // ドラッグ中のマウスイベントをウィンドウ全体でリッスン
             window.addEventListener('mousemove', onMouseMove);
-            window.addEventListener('mouseup', onMouseUp);
+            // mouseupリスナーは、上記のwindow.addEventListenerで既に設定済み
         });
 
         const onMouseMove = (e) => {
             if (isDragging) {
-                // マウスの現在位置から差分を引いて、パネルの新しい左上座標を計算
                 panel.style.left = `${e.clientX - offsetX}px`;
                 panel.style.top = `${e.clientY - offsetY}px`;
-                // CSSで指定していたrightを無効化
-                panel.style.right = 'auto'; 
+                panel.style.right = 'auto';
             }
         };
-
-        const onMouseUp = () => {
+        
+        // ドラッグ終了時にisDraggingフラグだけをリセットする専用のリスナー
+        header.addEventListener('mouseup', () => {
             isDragging = false;
-            // ドラッグ終了後、不要になったリスナーを解除
-            window.removeEventListener('mousemove', onMouseMove);
-            window.removeEventListener('mouseup', onMouseUp);
-        };
+        });
     }
 
         /**
