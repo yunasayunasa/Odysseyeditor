@@ -78,11 +78,8 @@ export function handleCharaShow(manager, params) {
     if (stateManager.sf.debug_mode) {
         const editor = manager.scene.plugins.get('EditorPlugin');
 
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-        // ★★★ ここが修正箇所です ★★★
-        // ★★★ 第2引数に、GameSceneのインスタンス (manager.scene) を渡します ★★★
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-     const editor = manager.scene.plugins.get('EditorPlugin');
+       
+    
         if (editor) {
             editor.makeEditable(chara, manager.scene);
         }
