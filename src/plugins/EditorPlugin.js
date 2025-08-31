@@ -304,17 +304,27 @@ export default class EditorPlugin extends Phaser.Plugins.BasePlugin {
         
         // --- ボディタイプ (Static / Dynamic) の切り替え ---
         const isStatic = body.isStatic;
-        // createCheckboxヘルパーを使う
+        
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        // ★★★ これが 'Is Static' を修正する最後のコードです ★★★
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
         this.createCheckbox(this.physicsPropsContainer, 'Is Static Body', isStatic, (isChecked) => {
+            // isCheckedには、チェックボックスの「新しい」状態(true/false)が入っている
             if (this.selectedObject) {
                 const targetScene = this.selectedObject.scene;
-                // isStaticの状態をトグル（反転）させる
-                const newStaticState = !this.selectedObject.body.isStatic;
+                
+                // 1. まず、現在のボディを物理ワールドから削除する
                 targetScene.physics.world.remove(this.selectedObject.body);
-                targetScene.physics.add.existing(this.selectedObject, newStaticState);
+                
+                // 2. 新しい状態でボディを再生成する
+                targetScene.physics.add.existing(this.selectedObject, isChecked); // isChecked = trueなら静的, falseなら動的
+                
+                // 3. 新しく作られたボディに、デフォルト設定を適用
                 if (this.selectedObject.body) {
                     this.selectedObject.body.collideWorldBounds = true;
                 }
+                
+                // 4. 最後に、パネル全体を再描画して、UIを最新の状態に更新する
                 this.updatePropertyPanel();
             }
         });
