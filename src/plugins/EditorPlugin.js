@@ -53,7 +53,14 @@ export default class EditorPlugin extends Phaser.Plugins.BasePlugin {
         gameObject.on('pointerout', () => gameObject.clearTint());
         gameObject.setData('isEditable', true);
     }
-
+  /**
+     * シーンの何もない場所がクリックされた時に、選択を解除するためのメソッド
+     * このメソッドは、各シーンの 'pointerdown' イベントから呼び出される
+     */
+    onScenePointerDown() {
+        this.selectedObject = null;
+        this.updatePropertyPanel(); // これでプロパティパネルが非表示になる
+    }
     /**
      * プロパティ編集パネルの表示を更新する
      */

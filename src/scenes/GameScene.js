@@ -117,11 +117,15 @@ export default class GameScene extends Phaser.Scene {
         });
         this.time.delayedCall(10, () => this.scenarioManager.next());
     }
-        this.input.on('pointerdown', () => this.scenarioManager.onClick());
-        console.log("GameScene: create 完了");
-            console.log("[LOG-BOMB] GameScene.create: END");
-    }
-
+      // --- 背景クリックによる選択解除のイベントリスナー ---
+    this.input.on('pointerdown', (pointer) => {
+        // GameSceneのオブジェクトが何もクリックされなかった場合
+        if (this.game.input.hitTest(pointer, this.children.list, this.cameras.main).length === 0) {
+            const editor = this.plugins.get('EditorPlugin');
+            if (editor) editor.onScenePointerDown();
+        }
+    });
+        }
     // ★★★ 修正箇所: stop()メソッドを一つに統一し、全てのクリーンアップを行う ★★★
     shutdown() {
     console.log("GameScene: shutdown されました。全てのマネージャーとリソースを停止・破棄します。");

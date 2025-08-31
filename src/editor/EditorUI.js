@@ -24,9 +24,8 @@ export default class EditorUI {
      * @param {HTMLElement} panel - 対象のパネル要素
      * @param {string} headerSelector - ドラッグハンドルとなるヘッダーのCSSセレクタ
      */
-    initPanelDrag(panel, headerSelector) {
+   initPanelDrag(panel, headerSelector) {
         if (!panel) return;
-
         const header = panel.querySelector(headerSelector);
         if (!header) return;
 
@@ -34,15 +33,17 @@ export default class EditorUI {
         let offsetX, offsetY;
 
         header.addEventListener('mousedown', (e) => {
-            isDragging = true;
-            offsetX = e.clientX - panel.offsetLeft;
-            offsetY = e.clientY - panel.offsetTop;
-            
-            // mousedownイベントがPhaserに伝わらないようにする
-            e.stopPropagation(); 
-
-            window.addEventListener('mousemove', onMouseMove);
-            window.addEventListener('mouseup', onMouseUp);
+            // ★★★★★★★★★★★★★★★★★★★★★★★★★★
+            // ★★★ これが修正箇所です ★★★
+            // ★★★ ヘッダー自身がクリックされた時だけイベントを止める ★★★
+            // ★★★★★★★★★★★★★★★★★★★★★★★★★★
+            if (e.target === header) {
+                isDragging = true;
+                offsetX = e.clientX - panel.offsetLeft;
+                offsetY = e.clientY - panel.offsetTop;
+                window.addEventListener('mousemove', onMouseMove);
+                window.addEventListener('mouseup', onMouseUp);
+            }
         });
 
         const onMouseMove = (e) => {
