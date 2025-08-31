@@ -65,8 +65,7 @@ export default class EditorUI {
             }
         });
 
-        const gameCanvas = this.game.canvas;
-
+    
      const gameCanvas = this.game.canvas;
         gameCanvas.addEventListener('drop', (event) => {
             event.preventDefault();
