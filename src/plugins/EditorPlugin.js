@@ -81,28 +81,16 @@ gameObject.y = Math.round(dragY);
      * プロパティ編集パネルの表示を更新する
      */
     updatePropertyPanel() {
-      // ★★★ 強制デバッグコード ★★★
-        if (!this.selectedObject) {
-            console.log("[DEBUG] Deselected. Hiding panel.");
-            const panel = document.getElementById('editor-panel');
-            if(panel) panel.style.visibility = 'hidden';
-            return;
-        }
-
-        // ★★★ このアラートが表示されるかどうかが全てです ★★★
-        alert(`Object Selected: ${this.selectedObject.name || '(no name)'}\nNow trying to show the property panel.`);
-
-        // --- 元々の処理 ---
-        this.editorPanel = document.getElementById('editor-panel');
-        this.editorTitle = document.getElementById('editor-title');
-        this.editorPropsContainer = document.getElementById('editor-props');
-
-        if (!this.editorPanel || !this.editorPropsContainer || !this.editorTitle) {
-            alert("ERROR: HTML elements for the editor panel were not found!");
-            return;
-        };
+        if (!this.editorPanel || !this.editorPropsContainer || !this.editorTitle) return;
         
         this.editorPropsContainer.innerHTML = '';
+        
+        if (!this.selectedObject) {
+            this.editorTitle.innerText = 'No Object Selected';
+            this.editorPanel.style.visibility = 'hidden'; 
+            return;
+        }
+        
         this.editorPanel.style.visibility = 'visible';
         this.editorTitle.innerText = `Editing: ${this.selectedObject.name || '(no name)'}`;
 
