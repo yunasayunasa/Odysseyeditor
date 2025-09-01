@@ -101,6 +101,7 @@ export default class SystemScene extends Phaser.Scene {
             this._startAndMonitorScene(toSceneKey, data.params || {});
         }
     };
+}
    // src/scenes/SystemScene.js
 
     /**
@@ -203,4 +204,5 @@ this.tweens.killAll();
         this.events.emit('transition-complete', sceneKey);
     }
 }
+
 
