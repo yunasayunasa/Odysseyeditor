@@ -60,55 +60,54 @@ export default class SystemScene extends Phaser.Scene {
         });
     }
     
-     /**
-     * [jump]などによるシーン遷移リクエストを処理 (修正版)
+       /**
+     * [jump]などによるシーン遷移リクエストを処理する（汎用版）
      */
-       _handleRequestSceneTransition(data) {
+    _handleRequestSceneTransition(data) {
         console.log(`[SystemScene] シーン遷移リクエスト: ${data.from} -> ${data.to}`);
         
-        // ★ BGMの操作は一切しない ★
-
-        if (this.scene.isActive(data.from)) {
-            this.scene.stop(data.from); 
+        // --- どのシーンから遷移しても、UISceneを非表示にする ---
+        const fromSceneKey = data.from;
+        const toSceneKey = data.to;
+        
+        if (this.scene.isActive(fromSceneKey)) {
+            this.scene.stop(fromSceneKey); 
         }
+        
+        // GameScene以外（JumpSceneなど）に遷移する場合、UISceneは非表示にする
         if (this.scene.isActive('UIScene')) {
             this.scene.get('UIScene').setVisible(false);
         }
 
-
-        // ★ 4. 新しいシーンを起動
-        // BattleSceneのinitに渡すデータ構造を調整
-        this._startAndMonitorScene(data.to, { 
-            // BattleSceneのinitが `data.transitionParams` を期待している場合
-            transitionParams: data.params 
-        });
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        // ★★★ これが全てを解決する、データの受け渡しです ★★★
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        // 渡されたパラメータを、そのまま新しいシーンのinitに渡す
+        // これにより、JumpSceneもBattleSceneも、必要なデータを直接受け取れる
+        this._startAndMonitorScene(toSceneKey, data.params || {});
     };
     
-
-   /**
-     * サブシーンからノベルパートへの復帰リクエストを処理 (最終修正版)
-     * @param {object} data - { from: string, params: object }
+    /**
+     * サブシーンからノベルパートへの復帰リクエストを処理する（汎用版）
      */
     _handleReturnToNovel(data) {
         console.log(`[SystemScene] ノベル復帰リクエスト: from ${data.from}`);
-
-        if (this.scene.isActive(data.from)) {
-            this.scene.stop(data.from);
+        const fromSceneKey = data.from;
+        
+        if (this.scene.isActive(fromSceneKey)) {
+            this.scene.stop(fromSceneKey);
         }
+        
+        // GameSceneに戻るので、UISceneを表示する
         if (this.scene.isActive('UIScene')) {
             this.scene.get('UIScene').setVisible(true);
         }
 
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-        // ★★★ これが今回の修正の核心 ★★★
-        // ★★★ GameSceneが必要とするデータを全て渡す ★★★
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        // GameSceneが必要とする、全てのデータを渡す
         this._startAndMonitorScene('GameScene', {
-            charaDefs: this.globalCharaDefs, // ★★★ 最重要: キャラ定義を渡す！ ★★★
-            resumedFrom: data.from,          // どこから来たかを伝える
-            returnParams: data.params,       // サブシーンからの戻り値を渡す
-            // startScenarioやstartLabelは、復帰処理(performLoad)で
-            // セーブデータから復元されるので、ここでは不要
+            charaDefs: this.globalCharaDefs,
+            resumedFrom: fromSceneKey,
+            returnParams: data.params,
         });
     }
 
