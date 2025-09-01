@@ -1,224 +1,125 @@
-// src/scenes/GameScene.js (非継承・最終確定版)
-
 import ScenarioManager from '../core/ScenarioManager.js';
+import SoundManager from '../core/SoundManager.js';
+import StateManager from '../core/StateManager.js';
 import MessageWindow from '../ui/MessageWindow.js';
+import ConfigManager from '../core/ConfigManager.js';
 import { tagHandlers } from '../handlers/index.js';
 
-export default class GameScene extends Phaser.Scene { // ★ Phaser.Scene を直接継承
+
+export default class GameScene extends Phaser.Scene {
     constructor() {
-        super({ key: 'GameScene' });
-        
+        super({key:'GameScene', active :false});
+        // プロパティの初期化
         this.scenarioManager = null;
+        this.soundManager = null;
+        this.stateManager = null;
         this.messageWindow = null;
         this.layer = { background: null, character: null, cg: null, message: null };
+        this.charaDefs = null;
         this.characters = {};
+        this.configManager = null;
+        this.choiceButtons = [];
         this.pendingChoices = [];
+        this.uiButtons = [];
+    
+        this.restoredBgmKey = null;
+        
+          this.isPerformingLoad = false; // ★★★ 追加: ロード処理中フラグ ★★★
+        this.isSceneFullyReady = false; // シーンが完全に準備完了したかのフラグ
     }
 
-        init(data) {
-        console.log("[GameScene] Initializing with data:", data);
-        
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-        // ★★★ これがあなたのSystemSceneに基づいた正しいコードです ★★★
-        // ★★★ 'data'オブジェクトから直接プロパティを取得します ★★★
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    init(data) {
         this.charaDefs = data.charaDefs;
         this.startScenario = data.startScenario || 'test.ks';
         this.startLabel = data.startLabel || null;
+  this.isPerformingLoad = false; // ★★★ init時にリセット ★★★
         this.isResuming = data.resumedFrom ? true : false;
         this.returnParams = data.returnParams || null;
+               // ★★★ 修正箇所 ★★★
+        // SystemSceneから渡されたBGMキーを受け取り、プロパティに保存する
+        this.restoredBgmKey = data.restoredBgmKey || null;
+        if (this.restoredBgmKey) {
+            console.log(`[GameScene.init] 復帰BGMキーを受け取りました: ${this.restoredBgmKey}`);
+        this.isSceneFullyReady = false; // init時にリセット
+    }
     }
 
-  create() {
-        console.log("[GameScene] Create started.");
-        
-        // --- 1. シーン固有のオブジェクトとマネージャーを全て生成 ---
-        this.layer = {
-            background: this.add.container(0, 0).setDepth(0),
-            character: this.add.container(0, 0).setDepth(10),
-            cg: this.add.container(0, 0).setDepth(5),
-            message: this.add.container(0, 0).setDepth(20)
-        };
+    preload() {
+        this.load.text('test.ks', 'assets/test.ks'); 
+        this.load.text('scene2.ks', 'assets/scene2.ks'); 
+        this.load.text('overlay_test.ks', 'assets/overlay_test.ks');
+    }
 
-        const soundManager = this.registry.get('soundManager');
-        const configManager = this.registry.get('configManager');
-        const stateManager = this.registry.get('stateManager');
+   // src/scenes/GameScene.js の create() メソッドの正しい形
+
+        async create() { 
+            
+            console.log("GameScene: クリエイト処理を開始します。");
+        this.cameras.main.setBackgroundColor('#000000');
         
-        this.messageWindow = new MessageWindow(this, soundManager, configManager);
+        // --- レイヤー生成とdepth設定 ---
+        this.layer.background = this.add.container(0, 0).setDepth(0);
+        this.layer.cg = this.add.container(0, 0).setDepth(5);
+        this.layer.character = this.add.container(0, 0).setDepth(10);
+        this.layer.message = this.add.container(0, 0).setDepth(20);
+
+        // --- 入力ブロッカー ---
+        this.choiceInputBlocker = this.add.rectangle(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, 0x000000, 0.001)
+            .setInteractive()
+            .setVisible(false)
+            .setDepth(0);
+        this.choiceInputBlocker.on('pointerdown', () => console.log("選択肢を選んでください"));
+        // this.choiceInputBlocker.input.enabled = false; // setVisible(false)で十分なので、この行は不要
+
+        // --- マネージャー/UIクラスの生成 ---
+        this.configManager = this.sys.registry.get('configManager');
+        this.stateManager = this.sys.registry.get('stateManager'); 
+           // ★★★ 修正箇所: SoundManagerをnewするのではなく、Registryから取得 ★★★
+        this.soundManager = this.sys.registry.get('soundManager');
+        this.messageWindow = new MessageWindow(this, this.soundManager, this.configManager);
         this.layer.message.add(this.messageWindow); 
-        
-        this.scenarioManager = new ScenarioManager(this, this.layer, this.charaDefs, this.messageWindow, soundManager, stateManager, configManager);
-        
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-        // ★★★ 復活させるタグハンドラの登録処理 ★★★
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        this.scenarioManager = new ScenarioManager(this, this.layer, this.charaDefs, this.messageWindow, this.soundManager, this.stateManager, this.configManager);
+  // ★★★ 追加: 最初のクリックで一度だけAudioContextを有効化する ★★★
+     
+
+        // ★★★ 追加: 最初のクリックで一度だけAudioContextを有効化する ★★★
+        this.input.once('pointerdown', () => {
+            if (this.soundManager) {
+                this.soundManager.resumeContext();
+            }
+        }, this);    // --- タグハンドラの登録 ---
+        console.log("タグハンドラの一括登録を開始します...");
         for (const tagName in tagHandlers) {
             this.scenarioManager.registerTag(tagName, tagHandlers[tagName]);
         }
-        console.log(`[GameScene] ${Object.keys(tagHandlers).length} tag handlers registered.`);
-
-        // --- 2. このシーン専用のレイアウト処理 ---
-        const sceneKey = this.scene.key;
-        const layoutData = this.cache.json.get(sceneKey);
-
-        if (layoutData && layoutData.objects) {
-            console.log(`[${sceneKey}] Building scene from layout data...`);
-            for (const layout of layoutData.objects) {
-                // 2-1. オブジェクトを生成
-                const textureKey = layout.texture || layout.name.split('_')[0];
-                const gameObject = this.add.image(layout.x, layout.y, textureKey);
-                
-                // 2-2. 正しいレイヤーに追加
-                if (layout.name.startsWith('bg_')) {
-                    this.layer.background.add(gameObject);
-                } else {
-                    this.layer.character.add(gameObject);
-                }
-
-                // 2-3. プロパティを適用
-                this.applyProperties(gameObject, layout); // ★ applyPropertiesはGameScene自身のメソッドとして持つ
-            }
-        } else {
-            console.warn(`[${sceneKey}] No layout data found.`);
-        }
-
-         // --- 3. シーンの全ての「レイヤーの中身」を編集可能にする ---
-        const editor = this.plugins.get('EditorPlugin');
-        if (editor) {
-            // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-            // ★★★ これが全てを解決する、最後の修正です ★★★
-            // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-            
-            // シーンのルート(children.list)ではなく、
-            // 各レイヤーコンテナの中身(layer.background.listなど)をループさせる
-            for (const layerName in this.layer) {
-                const container = this.layer[layerName];
-                if (container && container.list) {
-                    container.list.forEach(child => {
-                        // オブジェクトに名前がなければ、編集対象にしない
-                        if (child.name) {
-                            editor.makeEditable(child, this);
-                        }
-                    });
-                }
-            }
-        }
+        console.log(`${Object.keys(tagHandlers).length}個のタグハンドラを登録しました。`);
         
-        // --- 4. シナリオを開始し、準備完了を通知する ---
-        this.input.on('pointerdown', () => {
-            if (this.scenarioManager) this.scenarioManager.onClick();
-        });
-        
+     
+          // --- ゲーム開始ロジック ---
+    if (this.isResuming) {
+        console.log("GameScene: 復帰処理を開始します。");
+        console.log("[LOG-BOMB] GameScene.create: AWAITING performLoad..."); // ★
+        await this.performLoad(0, this.returnParams);
+        console.log("[LOG-BOMB] GameScene.create: ...performLoad COMPLETED."); // ★
+     } else {
+        console.log("GameScene: 通常起動します。");
+        this.performSave(0);
         this.scenarioManager.loadScenario(this.startScenario, this.startLabel);
-        
-        this.time.delayedCall(10, () => {
-            if (this.scenarioManager) this.scenarioManager.next();
+        this.isSceneFullyReady = true;
+
+        // ★★★ 修正の核心 (通常起動時) ★★★
+        // イベントの発行を、ごくわずかに（1フレーム後）遅らせる
+        this.time.delayedCall(1, () => {
+            this.events.emit('gameScene-load-complete');
+            console.log("GameScene: 通常起動完了。ロード完了イベントを発行しました。(遅延発行)");
         });
-
-        this.events.emit('scene-ready');
-        console.log(`[GameScene] Setup complete. Scene is ready.`);
+        this.time.delayedCall(10, () => this.scenarioManager.next());
+    }
+        this.input.on('pointerdown', () => this.scenarioManager.onClick());
+        console.log("GameScene: create 完了");
+            console.log("[LOG-BOMB] GameScene.create: END");
     }
 
-     /**
-     * BaseGameSceneのfinalizeSetupから呼び出される、このシーン専用の最終処理
-     */
-    onSetupComplete() {
-        // 3. 全ての準備が整ったこの場所で、イベントリスナーとシナリオ実行を設定
-        this.input.on('pointerdown', () => {
-            if (this.scenarioManager) this.scenarioManager.onClick();
-        });
-        
-        this.scenarioManager.loadScenario(this.startScenario, this.startLabel);
-       this.time.delayedCall(10, () => this.scenarioManager.next());
-    }
-  /**
-     * ★★★ 新規メソッド (旧applyPhysicsProperties) ★★★
-     * 単体のオブジェクトに、JSONから読み込んだプロパティを「適用」する
-     */
-    applyProperties(gameObject, layout) {
-        gameObject.name = layout.name;
-        
-        // Transformプロパティを適用
-        gameObject.setPosition(layout.x, layout.y);
-        gameObject.setScale(layout.scaleX, layout.scaleY);
-        gameObject.setAngle(layout.angle);
-        gameObject.setAlpha(layout.alpha);
-if (layout.visible !== undefined) {
-            gameObject.setVisible(layout.visible);
-        }
-        // 物理プロパティを適用
-        if (layout.physics) {
-            const phys = layout.physics;
-            this.physics.add.existing(gameObject, phys.isStatic);
-            if (gameObject.body) {
-                gameObject.body.setSize(phys.width, phys.height);
-                gameObject.body.setOffset(phys.offsetX, phys.offsetY);
-                gameObject.body.allowGravity = phys.allowGravity;
-                gameObject.body.bounce.setTo(phys.bounceX, phys.bounceY);
-                gameObject.body.collideWorldBounds = phys.collideWorldBounds;
-            }
-        }
-
-        // エディタに登録
-        const editor = this.plugins.get('EditorPlugin');
-        if (editor) {
-            editor.makeEditable(gameObject, this);
-        }
-    }
-
-
-    /**
-     * GameScene専用のオブジェクト生成ロジック
-     */
-    createObjectFromLayout(layout) {
-        const gameObject = super.createObjectFromLayout(layout);
-
-        if (gameObject) {
-            // 名前の先頭が'bg_'なら背景レイヤー、それ以外ならキャラクターレイヤーに振り分け
-            if (layout.name.startsWith('bg_')) {
-                this.layer.background.add(gameObject);
-            } else {
-                this.layer.character.add(gameObject);
-            }
-        }
-        return gameObject;
-    }
-  
-     /**
-     * ★★★ 新規メソッド (旧applyPhysicsProperties) ★★★
-     * 単体のオブジェクトに、JSONから読み込んだプロパティを「適用」する
-     */
-    applyProperties(gameObject, layout) {
-        gameObject.name = layout.name;
-        
-        // Transformプロパティを適用
-        gameObject.setPosition(layout.x, layout.y);
-        gameObject.setScale(layout.scaleX, layout.scaleY);
-        gameObject.setAngle(layout.angle);
-        gameObject.setAlpha(layout.alpha);
-if (layout.visible !== undefined) {
-            gameObject.setVisible(layout.visible);
-        }
-        // 物理プロパティを適用
-        if (layout.physics) {
-            const phys = layout.physics;
-            this.physics.add.existing(gameObject, phys.isStatic);
-            if (gameObject.body) {
-                gameObject.body.setSize(phys.width, phys.height);
-                gameObject.body.setOffset(phys.offsetX, phys.offsetY);
-                gameObject.body.allowGravity = phys.allowGravity;
-                gameObject.body.bounce.setTo(phys.bounceX, phys.bounceY);
-                gameObject.body.collideWorldBounds = phys.collideWorldBounds;
-            }
-        }
-
-        // エディタに登録
-        const editor = this.plugins.get('EditorPlugin');
-        if (editor) {
-            editor.makeEditable(gameObject, this);
-        }
-    }
-        
     // ★★★ 修正箇所: stop()メソッドを一つに統一し、全てのクリーンアップを行う ★★★
     shutdown() {
     console.log("GameScene: shutdown されました。全てのマネージャーとリソースを停止・破棄します。");
@@ -244,12 +145,14 @@ if (layout.visible !== undefined) {
     this.uiButtons.forEach(b => b.destroy());
     this.uiButtons = [];
 
+    // 4. ★★★★★ このシーンが管理するBGMを停止しない ★★★★★
+    // BGMの管理はSystemSceneと各シーンのcreateに任せるため、この行をコメントアウトまたは削除
+    // if (this.soundManager) {
+    //     this.soundManager.stopBgm(0); 
+    // }
     
-        super.shutdown(); // 親のshutdownを呼ぶ
+    super.shutdown(); // Phaser.Sceneの親シャットダウン処理を呼ぶ
 }
-
- 
-    
 
       // ★★★ 修正箇所: onFVariableChanged, updatePlayerHpBar, updateCoinHudを削除し、onFVariableChangedに一本化 ★★★
     onFVariableChanged(key, value) {
