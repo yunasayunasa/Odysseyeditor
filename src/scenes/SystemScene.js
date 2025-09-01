@@ -168,30 +168,40 @@ export default class SystemScene extends Phaser.Scene {
      * @param {string} sceneKey - 起動するシーンのキー
      * @param {object} params - シーンに渡すデータ
      */
+  // src/scenes/SystemScene.js
+
     _startAndMonitorScene(sceneKey, params) {
         if (this.isProcessingTransition) {
-            console.warn(`[SystemScene] 遷移処理中に新たな遷移リクエスト(${sceneKey})が、無視されました。`);
+            console.warn(`[SystemScene] 遷移処理中に新たな遷移リクエストが無視されました。`);
             return;
         }
 
         this.isProcessingTransition = true;
         this.game.input.enabled = false;
-        console.log(`[SystemScene] シーン[${sceneKey}]の起動を開始。ゲーム全体の入力を無効化。`);
-this.tweens.killAll();
-        console.log("[SystemScene] すべての既存Tweenを強制終了しました。");
+        console.log(`[SystemScene] シーン[${sceneKey}]の起動を開始。`);
+        this.tweens.killAll();
 
-        // ★★★ 修正の核心 ★★★
-        // 起動するシーンの「準備完了」を知らせるカスタムイベントを待つ
-       const targetScene = this.scene.get(sceneKey);
+        const targetScene = this.scene.get(sceneKey);
         
-        // ★★★ 全てのシーンで、共通の 'scene-ready' イベントだけを待つ ★★★
-        targetScene.events.once('scene-ready', () => {
-            this._onTransitionComplete(sceneKey);
-        });
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        // ★★★ これが、あなたのエンジン本来の正しい姿です ★★★
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        
+        // もし、起動するのがGameSceneなら、特別な完了イベントを待つ
+        if (sceneKey === 'GameScene') {
+            targetScene.events.once('gameScene-load-complete', () => {
+                this._onTransitionComplete(sceneKey);
+            });
+        } else {
+            // それ以外のシーン (JumpSceneなど) なら、共通の 'scene-ready' を待つ
+            targetScene.events.once('scene-ready', () => {
+                this._onTransitionComplete(sceneKey);
+            });
+        }
 
+        // リスナーを登録した後に、シーンを起動
         this.scene.run(sceneKey, params);
     }
-
      
     /**
      * シーン遷移が完全に完了したときの処理
@@ -204,5 +214,6 @@ this.tweens.killAll();
         this.events.emit('transition-complete', sceneKey);
     }
 }
+
 
 
