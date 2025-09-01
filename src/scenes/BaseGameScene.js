@@ -104,7 +104,8 @@ export default class BaseGameScene extends Phaser.Scene {
 if (layout.visible !== undefined) {
             gameObject.setVisible(layout.visible);
         }
-          gameObject.setInteractive();
+        gameObject.setInteractive();
+
 
         // 物理プロパティを適用
         if (layout.physics) {
