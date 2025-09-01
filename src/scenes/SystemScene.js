@@ -63,54 +63,44 @@ export default class SystemScene extends Phaser.Scene {
        /**
      * [jump]などによるシーン遷移リクエストを処理する（汎用版）
      */
+ // src/scenes/SystemScene.js
+
     _handleRequestSceneTransition(data) {
         console.log(`[SystemScene] シーン遷移リクエスト: ${data.from} -> ${data.to}`);
         
-        // --- どのシーンから遷移しても、UISceneを非表示にする ---
         const fromSceneKey = data.from;
         const toSceneKey = data.to;
-        
+
         if (this.scene.isActive(fromSceneKey)) {
+            // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+            // ★★★ これが全てを解決する、最後のアーキテクチャ修正です ★★★
+            // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+            
+            // 1. まず、'from'シーンの'shutdown'イベントを一度だけ監視する
+            const fromScene = this.scene.get(fromSceneKey);
+            fromScene.events.once('shutdown', () => {
+                console.log(`[SystemScene] シーン[${fromSceneKey}]のシャットダウンを検知。`);
+                
+                // 2. シャットダウンが完了した「後」で、次のシーンの起動を開始する
+                if (this.scene.isActive('UIScene')) {
+                    // JumpSceneなどに遷移する場合は、UISceneを非表示にする
+                    // (このロジックは、遷移先がGameScene以外の場合に適用)
+                    const isReturningToNovel = (toSceneKey === 'GameScene');
+                    this.scene.get('UIScene').setVisible(isReturningToNovel);
+                }
+                
+                // 3. 次のシーンを、安全なタイミングで起動・監視する
+                this._startAndMonitorScene(toSceneKey, data.params || {});
+            });
+
+            // 4. 全ての準備が整った後で、シーンの停止を「命令」する
             this.scene.stop(fromSceneKey); 
-        }
-        
-        // GameScene以外（JumpSceneなど）に遷移する場合、UISceneは非表示にする
-        if (this.scene.isActive('UIScene')) {
-            this.scene.get('UIScene').setVisible(false);
-        }
 
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-        // ★★★ これが全てを解決する、データの受け渡しです ★★★
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-        // 渡されたパラメータを、そのまま新しいシーンのinitに渡す
-        // これにより、JumpSceneもBattleSceneも、必要なデータを直接受け取れる
-        this._startAndMonitorScene(toSceneKey, data.params || {});
+        } else {
+            // もし'from'シーンがアクティブでなければ、直接次のシーンを開始
+            this._startAndMonitorScene(toSceneKey, data.params || {});
+        }
     };
-    
-    /**
-     * サブシーンからノベルパートへの復帰リクエストを処理する（汎用版）
-     */
-    _handleReturnToNovel(data) {
-        console.log(`[SystemScene] ノベル復帰リクエスト: from ${data.from}`);
-        const fromSceneKey = data.from;
-        
-        if (this.scene.isActive(fromSceneKey)) {
-            this.scene.stop(fromSceneKey);
-        }
-        
-        // GameSceneに戻るので、UISceneを表示する
-        if (this.scene.isActive('UIScene')) {
-            this.scene.get('UIScene').setVisible(true);
-        }
-
-        // GameSceneが必要とする、全てのデータを渡す
-        this._startAndMonitorScene('GameScene', {
-            charaDefs: this.globalCharaDefs,
-            resumedFrom: fromSceneKey,
-            returnParams: data.params,
-        });
-    }
-
    // src/scenes/SystemScene.js
 
     /**
@@ -213,3 +203,4 @@ this.tweens.killAll();
         this.events.emit('transition-complete', sceneKey);
     }
 }
+
